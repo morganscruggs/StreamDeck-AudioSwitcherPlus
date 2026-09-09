@@ -1,207 +1,272 @@
 <!DOCTYPE HTML>
-<html>
+<html lang="en">
 
 <head>
-  <title>Audio Switcher Plus (Node) PI</title>
   <meta charset="utf-8" />
-  <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
-  <link rel="stylesheet" href="css/sdpi.css">
+  <title>Audio Switcher Plus (Node)</title>
   <style>
-    /* sdpi.css's own .sdpi-item rule (display: flex) is defined after its
-       .hidden rule (display: none) in the same file; both are single-class
-       selectors, so on a tie CSS source order wins and .sdpi-item silently
-       overrides .hidden on any element carrying both classes. Redeclaring
-       .hidden here - after the sdpi.css <link> - wins the same tie the
-       other way, so hidden .sdpi-item rows actually stay hidden. */
-    .hidden {
-      display: none;
+    /* The panel's look, written by hand: no sdpi.css, no CDN, nothing to fetch to open it. */
+    :root {
+      --bg: #2d2d2d; --fg: #d8d8d8; --muted: #969696; --line: #3d3d3d;
+      --field: #3d3d3d; --accent: #77f; --ok: #4caf50; --warn: #d6a00a; --err: #d96a6a;
     }
-
-    .icon-picker {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 8px 12px 24px;
+      background: var(--bg); color: var(--fg);
+      font: 9pt/1.5 "Segoe UI", Arial, sans-serif;
     }
+    .hidden { display: none !important; }
 
-    .icon-option {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 56px;
-      padding: 4px;
-      border: 1px solid transparent;
-      border-radius: 4px;
-      cursor: pointer;
-      background: none;
+    details {
+      border: 1px solid var(--line); border-radius: 5px;
+      margin-bottom: 6px; background: #333;
     }
-
-    .icon-option:hover {
-      border-color: #666;
+    details[open] { background: #313131; }
+    summary {
+      cursor: pointer; padding: 7px 10px; font-weight: 600;
+      letter-spacing: .04em; text-transform: uppercase; font-size: 8pt;
+      color: #bfbfbf; user-select: none; list-style: none;
     }
+    summary::-webkit-details-marker { display: none; }
+    summary::before { content: "▸ "; color: var(--muted); }
+    details[open] > summary::before { content: "▾ "; }
+    details[open] > summary { border-bottom: 1px solid var(--line); }
+    .body { padding: 8px 10px 10px; }
 
-    .icon-option.selected {
-      border-color: #4a90e2;
-      background: rgba(74, 144, 226, 0.15);
+    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .row > label:first-child {
+      flex: 0 0 82px; text-align: right; color: var(--muted); font-size: 8.5pt;
     }
+    .row > .ctl { flex: 1 1 auto; min-width: 0; display: flex; gap: 6px; align-items: center; }
+    .stack { display: block; margin-bottom: 8px; }
+    .stack > label { display: block; color: var(--muted); font-size: 8.5pt; margin-bottom: 3px; }
 
-    .icon-option img {
-      width: 32px;
-      height: 32px;
-      object-fit: contain;
+    select {
+      background: var(--field); color: var(--fg); border: 1px solid #4a4a4a;
+      border-radius: 4px; padding: 4px 6px; font: inherit; width: 100%; min-width: 0;
     }
-
-    .icon-option span {
-      font-size: 10px;
-      margin-top: 2px;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 100%;
-    }
-
-    .color-input-label {
-      width: auto;
-      margin-right: 4px;
-    }
-
+    select:focus, input:focus { outline: 1px solid var(--accent); }
     input[type="color"] {
-      width: 28px;
-      height: 22px;
-      padding: 0;
-      border: none;
-      background: none;
-      vertical-align: middle;
-      margin-right: 12px;
+      width: 34px; height: 24px; padding: 1px; border: 1px solid #4a4a4a;
+      border-radius: 4px; background: var(--field); flex: 0 0 34px;
     }
+    .ctl > span { color: var(--muted); font-size: 8.5pt; }
 
+    button {
+      background: #4a4a4a; color: var(--fg); border: 1px solid #565656;
+      border-radius: 4px; padding: 4px 9px; font: inherit; cursor: pointer; white-space: nowrap;
+    }
+    button:hover { background: #565656; }
+    button.link {
+      background: none; border: 0; color: #8ab4e8; padding: 2px 0;
+      text-decoration: underline; font-size: 8.5pt;
+    }
+    button.link:hover { background: none; color: #a9caf3; }
+
+    /* Segmented choice: the radio stays in the DOM (the script reads `.checked`), the label is the button. */
+    .seg { display: flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+    .seg input { display: none; }
+    .seg label {
+      background: #333; color: var(--muted); padding: 4px 12px; font-size: 8.5pt;
+      cursor: pointer; user-select: none; border-right: 1px solid var(--line);
+    }
+    .seg label:last-child { border-right: 0; }
+    .seg input:checked + label { background: #46617f; color: #eaf2fb; }
+
+    .check { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 6px; }
+    .check input { accent-color: var(--accent); margin-top: 3px; }
+    .check label { cursor: pointer; }
+
+    .hint { color: var(--muted); font-size: 8pt; margin: -2px 0 8px 90px; }
+    .hint.full { margin-left: 0; }
+
+    /* The chosen device, in full: the <select> is too narrow to show more than a name's head. */
+    .card {
+      margin: -2px 0 10px 90px; padding: 7px 9px; border-radius: 4px;
+      background: #2a2a2a; border: 1px solid var(--line);
+    }
+    .card .name { color: #e4e4e4; font-size: 8.5pt; font-weight: 600; overflow-wrap: anywhere; }
+    .card dl { margin: 5px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 1px 8px; }
+    .card dt { color: var(--muted); font-size: 8pt; white-space: nowrap; }
+    .card dd { margin: 0; font-size: 8pt; color: #cfcfcf; overflow-wrap: anywhere; }
+    .card dd.mono { font-family: Consolas, "Courier New", monospace; font-size: 7.5pt; color: #b9c9d8; user-select: text; }
+    .card .empty { color: var(--muted); font-size: 8pt; }
+    .pill {
+      display: inline-block; border-radius: 3px; padding: 0 5px; font-size: 7.5pt; font-weight: 600;
+    }
+    .pill.on { background: #2e5e3a; color: #cfe9d5; }
+    .pill.warn { background: #5a4a1a; color: #f0d78a; }
+    .pill.off { background: #4a4a4a; color: #b0b0b0; }
+    .pill.err { background: #5e2e2e; color: #e9cfcf; }
+
+    /* Icons are chosen by looking, not by reading a <select>. The dark plate mimics the key. */
+    .grid { display: flex; flex-wrap: wrap; gap: 4px; }
+    .grid button {
+      width: 58px; height: 58px; padding: 0; border-radius: 7px;
+      background: #131318; border: 1px solid #35353f;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    }
+    .grid button:hover { background: #1c1c23; border-color: #4d4d5a; }
+    .grid button.on { border-color: var(--accent); background: #1e2033; }
+    .grid button img { width: 30px; height: 30px; display: block; object-fit: contain; }
+    .grid button span { font-size: 7pt; color: var(--muted); }
+    .grid button.on span { color: #cfe0f5; }
+
+    footer {
+      margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line);
+      text-align: center; color: var(--muted); font-size: 7.5pt; line-height: 1.7;
+    }
+    footer #version { display: block; font-variant-numeric: tabular-nums; }
   </style>
 </head>
 
 <body>
-  <div class="sdpi-wrapper hidden" id="mainWrapper">
-    <div type="select" class="sdpi-item" id="primaryDeviceDiv">
-      <div class="sdpi-item-label">Primary</div>
-      <select class="sdpi-item-value select" id="primaryDevice" onchange="saveSettings();">
-      </select>
-    </div>
-    <div type="select" class="sdpi-item hidden" id="iconDiv">
-      <div class="sdpi-item-label">Icon</div>
-      <div class="sdpi-item-value icon-picker" id="iconPicker"></div>
-    </div>
-    <div type="select" class="sdpi-item hidden" id="iconColorDiv">
-      <div class="sdpi-item-label">Icon Color</div>
-      <div class="sdpi-item-value">
-        <span class="sdpi-item-child">
-          <label class="color-input-label">On</label>
-          <input type="color" id="iconBrightColor" onchange="updateIconColor('iconBrightColor');" />
-        </span>
-        <span class="sdpi-item-child">
-          <label class="color-input-label">Off</label>
-          <input type="color" id="iconDarkColor" onchange="updateIconColor('iconDarkColor');" />
-        </span>
-        <span class="sdpi-item-child">
-          <a href="#" onclick="resetIconColors(); return false;">Reset</a>
-        </span>
+  <div class="hidden" id="mainWrapper">
+
+    <details open>
+      <summary id="devicesSummary">Device</summary>
+      <div class="body">
+        <div class="row">
+          <label id="primaryDeviceLabel" for="primaryDevice">Device</label>
+          <div class="ctl">
+            <select id="primaryDevice" onchange="saveSettings();"></select>
+          </div>
+        </div>
+        <div class="card" id="primaryDeviceInfo"></div>
+
+        <div id="secondaryDeviceDiv">
+          <div class="row">
+            <label for="secondaryDevice">Secondary</label>
+            <div class="ctl">
+              <select id="secondaryDevice" onchange="saveSettings();"></select>
+            </div>
+          </div>
+          <div class="card" id="secondaryDeviceInfo"></div>
+        </div>
       </div>
-    </div>
-    <div type="select" class="sdpi-item hidden" id="primaryIconDiv">
-      <div class="sdpi-item-label">Primary Icon</div>
-      <div class="sdpi-item-value icon-picker" id="primaryIconPicker"></div>
-    </div>
-    <div type="select" class="sdpi-item" id="secondaryDeviceDiv">
-      <div class="sdpi-item-label">Secondary</div>
-      <select class="sdpi-item-value select" id="secondaryDevice" onchange="saveSettings();">
-      </select>
-    </div>
-    <div type="select" class="sdpi-item hidden" id="secondaryIconDiv">
-      <div class="sdpi-item-label">Secondary Icon</div>
-      <div class="sdpi-item-value icon-picker" id="secondaryIconPicker"></div>
-    </div>
-    <div type="select" class="sdpi-item hidden" id="toggleIconColorDiv">
-      <div class="sdpi-item-label">Icon Colors</div>
-      <div class="sdpi-item-value">
-        <span class="sdpi-item-child">
-          <label class="color-input-label">Primary</label>
-          <input type="color" id="primaryIconColor" onchange="updateIconColor('primaryIconColor');" />
-        </span>
-        <span class="sdpi-item-child">
-          <label class="color-input-label">Secondary</label>
-          <input type="color" id="secondaryIconColor" onchange="updateIconColor('secondaryIconColor');" />
-        </span>
-        <span class="sdpi-item-child">
-          <a href="#" onclick="resetIconColors(); return false;">Reset</a>
-        </span>
+    </details>
+
+    <details open>
+      <summary>Behavior</summary>
+      <div class="body">
+        <div class="row">
+          <label>Direction</label>
+          <div class="ctl">
+            <div class="seg">
+              <input id="output" type="radio" name="direction" value="output" onchange="updateDirection();" />
+              <label for="output">Output</label>
+              <input id="input" type="radio" name="direction" value="input" onchange="updateDirection();" />
+              <label for="input">Input</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Role</label>
+          <div class="ctl">
+            <div class="seg">
+              <input id="allRole" type="radio" name="role" value="all" onchange="saveSettings();" />
+              <label for="allRole">All</label>
+              <input id="defaultRole" type="radio" name="role" value="default" onchange="saveSettings();" />
+              <label for="defaultRole">Default</label>
+              <input id="communicationRole" type="radio" name="role" value="communication" onchange="saveSettings();" />
+              <label for="communicationRole">Communications</label>
+            </div>
+          </div>
+        </div>
+        <div class="hint">Default is what Windows plays or records with. Communications is what calling apps use. All sets both.</div>
+
+        <div class="row">
+          <label for="matchStrategy">Matching</label>
+          <div class="ctl">
+            <select id="matchStrategy" onchange="saveSettings();">
+              <option value="Fuzzy">Fuzzy — follow the device when Windows renumbers it</option>
+              <option value="ID">Exact — this endpoint ID only</option>
+            </select>
+          </div>
+        </div>
+        <div class="hint">Windows gives a re-plugged device a new ID and a "2-" prefix. Fuzzy finds it again by name.</div>
       </div>
-    </div>
-    <div type="radio" class="sdpi-item">
-      <div class="sdpi-item-label">Direction</div>
-      <div class="sdpi-item-value">
-        <span class="sdpi-item-child">
-          <input id="input" type="radio" name="direction" value="input" onchange="updateDirection();" />
-          <label for="input" class="sdpi-item-label"><span></span>Input</label>
-        </span>
-        <span class="sdpi-item-child">
-          <input id="output" type="radio" name="direction" value="output" onchange="updateDirection();" />
-          <label for="output" class="sdpi-item-label"><span></span>Output</label>
-        </span>
+    </details>
+
+    <details open>
+      <summary>Appearance</summary>
+      <div class="body">
+        <div class="stack" id="iconDiv">
+          <label>Icon</label>
+          <div class="grid" id="iconPicker"></div>
+        </div>
+        <div class="row" id="iconColorDiv">
+          <label>Colors</label>
+          <div class="ctl">
+            <span>On</span>
+            <input type="color" id="iconBrightColor" onchange="updateIconColor('iconBrightColor');" />
+            <span>Off</span>
+            <input type="color" id="iconDarkColor" onchange="updateIconColor('iconDarkColor');" />
+            <button class="link" onclick="resetIconColors();">Reset</button>
+          </div>
+        </div>
+
+        <div class="stack" id="primaryIconDiv">
+          <label>Primary icon</label>
+          <div class="grid" id="primaryIconPicker"></div>
+        </div>
+        <div class="stack" id="secondaryIconDiv">
+          <label>Secondary icon</label>
+          <div class="grid" id="secondaryIconPicker"></div>
+        </div>
+        <div class="row" id="toggleIconColorDiv">
+          <label>Colors</label>
+          <div class="ctl">
+            <span>Primary</span>
+            <input type="color" id="primaryIconColor" onchange="updateIconColor('primaryIconColor');" />
+            <span>Secondary</span>
+            <input type="color" id="secondaryIconColor" onchange="updateIconColor('secondaryIconColor');" />
+            <button class="link" onclick="resetIconColors();">Reset</button>
+          </div>
+        </div>
+        <div class="hint full">Leave a color untouched to keep the icon's own.</div>
       </div>
-    </div>
-    <div type="radio" class="sdpi-item">
-      <div class="sdpi-item-label">Role</div>
-      <div class="sdpi-item-value">
-        <span class="sdpi-item-child">
-          <input id="allRole" type="radio" name="role" value="all" onchange="saveSettings();" />
-          <label for="allRole" class="sdpi-item-label"><span></span>All</label>
-        </span>
-        <span class="sdpi-item-child">
-          <input id="defaultRole" type="radio" name="role" value="default" onchange="saveSettings();" />
-          <label for="defaultRole" class="sdpi-item-label"><span></span>Default</label>
-        </span>
-        <span class="sdpi-item-child">
-          <input id="communicationRole" type="radio" name="role" value="communication" onchange="saveSettings();" />
-          <label for="communicationRole" class="sdpi-item-label"><span></span>Communications</label>
-        </span>
-      </div>
-    </div>
-    <div type="select" class="sdpi-item">
-      <div class="sdpi-item-label">Device matching</div>
-      <select class="sdpi-item-value select" id="matchStrategy" onchange="saveSettings();">
-        <option value="ID">Exact</option>
-        <option value="Fuzzy">Fuzzy</option>
-      </select>
-    </div>
-    <div type="checkbox" class="sdpi-item">
-      <div class="sdpi-item-label">Device list</div>
-      <div class="sdpi-item-value">
-        <span class="sdpi-item-child">
+    </details>
+
+    <details>
+      <summary>Device list</summary>
+      <div class="body">
+        <div class="check">
           <input id="hideUnavailable" type="checkbox" onchange="updateHideUnavailable();" />
-          <label for="hideUnavailable" class="sdpi-item-label"><span></span>Hide disabled/unplugged devices</label>
-        </span>
-      </div>
-    </div>
-    <div type="checkbox" class="sdpi-item">
-      <div class="sdpi-item-label"></div>
-      <div class="sdpi-item-value">
-        <span class="sdpi-item-child">
+          <label for="hideUnavailable">Hide disabled and unplugged devices</label>
+        </div>
+        <div class="check">
           <input id="hideDeviceType" type="checkbox" onchange="updateHideDeviceType();" />
-          <label for="hideDeviceType" class="sdpi-item-label"><span></span>Hide device type</label>
-        </span>
+          <label for="hideDeviceType">Hide the endpoint name, show only the interface</label>
+        </div>
+        <div class="hint full">Devices Windows no longer sees are never listed. Renamed endpoints keep their name unless hidden here.</div>
       </div>
-    </div>
+    </details>
+
+    <footer>
+      <span id="version"></span>
+      <em>Audio Switcher Plus (Node) · a fork of Fred Emmott's Audio Switcher, extended by Morgan Scruggs</em>
+    </footer>
   </div>
 
   <script>
-    // Ported from the original C++ plugin's propertyinspector/index.html, with the SDKv2 $SD.api
-    // transport swapped for SDPIComponents.streamDeckClient (same client the sibling Multi Volume
-    // Controller plugin uses) - the DOM/settings logic below is otherwise unchanged.
-    const client = SDPIComponents.streamDeckClient;
-
-    var actionInfo,
+    // Ported from the original C++ plugin's propertyinspector/index.html; the DOM/settings logic is
+    // the same, only the transport is the plain Stream Deck WebSocket (no sdpi-components, no CDN).
+    var ws,
+      piUUID,
+      actionInfo,
       inputDevices,
       outputDevices,
       availableIcons,
       settings;
+
+    function send(event, payload) {
+      const message = { event, context: piUUID, payload };
+      if (event === "sendToPlugin") message.action = actionInfo;
+      ws.send(JSON.stringify(message));
+    }
 
     function stripNumberPrefix(name) {
       // Windows likes to replace "Foo" with "2- Foo", either as the whole
@@ -218,6 +283,10 @@
       const primaryId = (typeof primary == 'object' && primary) ? primary.id : primary;
       const secondary = settings['secondary'];
       const secondaryId = (typeof secondary == 'object' && secondary) ? secondary.id : secondary;
+      // A device saved while the other direction was selected must not be carried over as a phantom
+      // option (it would show up as a duplicate with the label saved from that other direction).
+      const direction = devices === inputDevices ? 'input' : 'output';
+      const belongsHere = (device) => !(typeof device == 'object' && device && device.direction && device.direction !== direction);
 
       const state_sort = {
         "connected": 0,
@@ -272,7 +341,7 @@
         primarySelector.appendChild(primaryOption);
         secondarySelector.appendChild(secondaryOption);
       });
-      if (primaryId && !primarySelector.querySelector(`option[value="${primaryId}"]`)) {
+      if (primaryId && belongsHere(primary) && !primarySelector.querySelector(`option[value="${primaryId}"]`)) {
         const opt = document.createElement("option");
         opt.setAttribute("value", primaryId);
         opt.setAttribute("selected", "selected");
@@ -282,7 +351,7 @@
         if (primaryId != secondaryId) cloned.removeAttribute('selected');
         secondarySelector.appendChild(cloned);
       }
-      if (secondaryId && primaryId != secondaryId && !secondarySelector.querySelector(`option[value="${secondaryId}"]`)) {
+      if (secondaryId && belongsHere(secondary) && primaryId != secondaryId && !secondarySelector.querySelector(`option[value="${secondaryId}"]`)) {
         const opt = document.createElement("option");
         opt.setAttribute("value", secondaryId);
         opt.setAttribute("selected", "selected");
@@ -292,6 +361,52 @@
         cloned.removeAttribute('selected');
         primarySelector.appendChild(cloned);
       }
+    }
+
+    const STATE_LABEL = {
+      connected: ["connected", "on"],
+      device_present_no_connection: ["unplugged", "warn"],
+      device_not_present: ["not present", "off"],
+      device_disabled: ["disabled", "err"]
+    };
+
+    function renderDeviceInfo(elementId, device, fallbackLabel) {
+      const card = document.getElementById(elementId);
+      while (card.firstChild) card.removeChild(card.firstChild);
+
+      if (!device) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = fallbackLabel ? `${fallbackLabel} — not in the current list` : "No device selected";
+        card.appendChild(empty);
+        return;
+      }
+
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = device.displayName;
+      card.appendChild(name);
+
+      const list = document.createElement("dl");
+      const addRow = (label, valueNode) => {
+        const term = document.createElement("dt");
+        term.textContent = label;
+        const detail = document.createElement("dd");
+        if (typeof valueNode === "string") detail.textContent = valueNode;
+        else detail.appendChild(valueNode);
+        list.appendChild(term);
+        list.appendChild(detail);
+        return detail;
+      };
+      addRow("endpoint", device.endpointName);
+      addRow("interface", device.interfaceName);
+      const [stateLabel, pillClass] = STATE_LABEL[device.state] || [device.state, "off"];
+      const pill = document.createElement("span");
+      pill.className = `pill ${pillClass}`;
+      pill.textContent = stateLabel;
+      addRow("state", pill);
+      addRow("id", device.id).className = "mono";
+      card.appendChild(list);
     }
 
     function updateDirection() {
@@ -319,24 +434,21 @@
       // Speakers are output-only and mics are input-only, so hide whichever doesn't apply.
       const hiddenIconId = isInput ? 'speaker' : 'mic';
 
-      const makeOption = (id, label, imageSrc) => {
-        const option = document.createElement('div');
-        option.className = 'icon-option' + (id === selectedIcon ? ' selected' : '');
-        option.onclick = () => selectIcon(pickerId, settingsKey, defaultId, id);
-        if (imageSrc) {
-          const img = document.createElement('img');
-          img.src = imageSrc;
-          option.appendChild(img);
-        }
-        const span = document.createElement('span');
-        span.innerText = label;
-        option.appendChild(span);
-        picker.appendChild(option);
-      };
-
       (availableIcons || []).forEach(icon => {
         if (icon.id === hiddenIconId) return;
-        makeOption(icon.id, icon.label, `../AudioDevicesIcons/${icon.id}.png`);
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = icon.id === selectedIcon ? 'on' : '';
+        option.title = icon.label;
+        option.onclick = () => selectIcon(pickerId, settingsKey, defaultId, icon.id);
+        const img = document.createElement('img');
+        img.src = `../AudioDevicesIcons/${icon.id}.png`;
+        img.alt = '';
+        option.appendChild(img);
+        const span = document.createElement('span');
+        span.textContent = icon.label;
+        option.appendChild(span);
+        picker.appendChild(option);
       });
     }
 
@@ -410,7 +522,7 @@
       }
 
       document.getElementById('hideUnavailable').checked = settings.hideUnavailable !== false;
-      document.getElementById('hideDeviceType').checked = settings.hideDeviceType !== false;
+      document.getElementById('hideDeviceType').checked = settings.hideDeviceType === true;
 
       inputDevices = payload.inputDevices;
       outputDevices = payload.outputDevices;
@@ -421,7 +533,7 @@
       saveSettings();
     }
 
-    async function saveSettings() {
+    function saveSettings() {
       const isInput = document.getElementById('input').checked;
       const devices = isInput ? inputDevices : outputDevices;
       const primaryId = document.getElementById('primaryDevice').value;
@@ -437,40 +549,46 @@
       settings.matchStrategy = document.getElementById('matchStrategy').value;
       settings.hideUnavailable = document.getElementById('hideUnavailable').checked;
       settings.hideDeviceType = document.getElementById('hideDeviceType').checked;
-      await client.setSettings(settings);
+      document.getElementById('primaryDevice').title = settings.primaryLabel || '';
+      document.getElementById('secondaryDevice').title = settings.secondaryLabel || '';
+      renderDeviceInfo('primaryDeviceInfo', settings.primary, settings.primaryLabel);
+      renderDeviceInfo('secondaryDeviceInfo', settings.secondary, settings.secondaryLabel);
+      send("setSettings", settings);
     }
 
-    (async function connect() {
-      const { actionInfo: info } = await client.getConnectionInfo();
-      actionInfo = info.action;
-      settings = info.payload && info.payload.settings ? info.payload.settings : {};
+    function setupForAction() {
+      const isSet = actionInfo === "com.morgan-scruggs.audioswitcherplus-node.set";
+      document.getElementById('devicesSummary').textContent = isSet ? 'Device' : 'Devices';
+      document.getElementById('primaryDeviceLabel').textContent = isSet ? 'Device' : 'Primary';
+      document.getElementById('secondaryDeviceDiv').classList.toggle('hidden', isSet);
+      document.getElementById('iconDiv').classList.toggle('hidden', !isSet);
+      document.getElementById('iconColorDiv').classList.toggle('hidden', !isSet);
+      document.getElementById('primaryIconDiv').classList.toggle('hidden', isSet);
+      document.getElementById('secondaryIconDiv').classList.toggle('hidden', isSet);
+      document.getElementById('toggleIconColorDiv').classList.toggle('hidden', isSet);
+    }
 
-      document.querySelector('#primaryDeviceDiv .sdpi-item-label').innerText = 'Primary';
-      document.getElementById('secondaryDeviceDiv').style.display = '';
-      document.getElementById('iconDiv').classList.add('hidden');
-      document.getElementById('iconColorDiv').classList.add('hidden');
-      document.getElementById('primaryIconDiv').classList.add('hidden');
-      document.getElementById('secondaryIconDiv').classList.add('hidden');
-      document.getElementById('toggleIconColorDiv').classList.add('hidden');
+    window.connectElgatoStreamDeckSocket = function (port, inUUID, registerEvent, inInfo, inActionInfo) {
+      piUUID = inUUID;
+      const info = JSON.parse(inInfo);
+      const action = JSON.parse(inActionInfo);
+      actionInfo = action.action;
+      settings = (action.payload && action.payload.settings) ? action.payload.settings : {};
+      document.getElementById('version').textContent = info.plugin && info.plugin.version ? `v${info.plugin.version}` : '';
+      setupForAction();
 
-      if (actionInfo === "com.morgan-scruggs.audioswitcherplus-node.set") {
-        document.querySelector('#primaryDeviceDiv .sdpi-item-label').innerText = 'Device';
-        document.getElementById('secondaryDeviceDiv').style.display = 'none';
-        document.getElementById('iconDiv').classList.remove('hidden');
-        document.getElementById('iconColorDiv').classList.remove('hidden');
-      } else if (actionInfo === "com.morgan-scruggs.audioswitcherplus-node.toggle") {
-        document.getElementById('primaryIconDiv').classList.remove('hidden');
-        document.getElementById('secondaryIconDiv').classList.remove('hidden');
-        document.getElementById('toggleIconColorDiv').classList.remove('hidden');
-      }
-
-      client.sendToPropertyInspector.subscribe(receivedDataFromPlugin);
-
-      await client.send("sendToPlugin", { event: "getIconList" });
-      await client.send("sendToPlugin", { event: "getDeviceList" });
-    })();
+      ws = new WebSocket(`ws://127.0.0.1:${port}`);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ event: registerEvent, uuid: inUUID }));
+        send("sendToPlugin", { event: "getIconList" });
+        send("sendToPlugin", { event: "getDeviceList" });
+      };
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.event === "sendToPropertyInspector") receivedDataFromPlugin(message);
+      };
+    };
   </script>
-
 </body>
 
 </html>
