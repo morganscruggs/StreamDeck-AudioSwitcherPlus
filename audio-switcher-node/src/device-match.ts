@@ -16,6 +16,9 @@ function fuzzifyInterface(name: string): string {
  * With "Fuzzy" matching, if the stored ID is no longer connected, this looks for a currently-connected
  * device with the same (number-prefix-stripped) interface name and endpoint name, so a device that got
  * renumbered (Windows swapping "Foo" for "2- Foo") is still recognized as the same physical device.
+ * If no endpoint name matches but exactly one connected device shares the interface name, that one is
+ * used: a renumbered endpoint comes back with its factory name, so a user-renamed endpoint would
+ * otherwise never match again.
  */
 export function getVolatileDeviceId(
 	device: AudioDeviceInfo | undefined,
@@ -32,12 +35,12 @@ export function getVolatileDeviceId(
 	if (!snapshot) return device.id;
 
 	const fuzzyInterface = fuzzifyInterface(device.interfaceName);
-	for (const other of Object.values(snapshot.devices)) {
-		if (other.state !== "connected") continue;
-		if (fuzzifyInterface(other.interfaceName) === fuzzyInterface && other.endpointName === device.endpointName) {
-			return other.id;
-		}
-	}
+	const connectedOnSameInterface = Object.values(snapshot.devices).filter(
+		(other) => other.state === "connected" && fuzzifyInterface(other.interfaceName) === fuzzyInterface
+	);
+	const sameEndpoint = connectedOnSameInterface.find((other) => other.endpointName === device.endpointName);
+	if (sameEndpoint) return sameEndpoint.id;
+	if (connectedOnSameInterface.length === 1) return connectedOnSameInterface[0].id;
 
 	return device.id;
 }
