@@ -8,18 +8,19 @@ Remaining improvements, roughly in priority order. Tick items off ([x]) or delet
 Decisions to make
 -----------------
 
-[ ] FUNDING.yml - still points at fredemmott (inherited from the original). Keep it as credit to
-    the original author, point it at your own account, or delete it.
+[x] FUNDING.yml - now points at morganscruggs instead of fredemmott.
 
-[ ] README "Getting Help" section - still the original author's "I am unable to offer support, do
-    not contact me via any means" text, which contradicts this repo's bug-report and feature-request
-    issue templates. Rewrite it in your own words, or remove the issue templates.
+[ ] GitHub Sponsors - the Sponsor button only works once the morganscruggs account is enrolled and
+    approved in GitHub Sponsors (github.com/sponsors), and "Sponsorships" is ticked under the repo's
+    Settings -> General -> Features. Until then, either finish that sign-up or switch FUNDING.yml to
+    another platform (e.g. ko_fi: or buy_me_a_coffee:).
 
-[ ] Plugin category name - both manifests use "Audio Devices Plus" / "Audio Devices Plus (Node)".
-    Elgato's validator warns that the category should match the plugin name ("Audio Switcher Plus" /
-    "Audio Switcher Plus (Node)"). Only a warning; renaming just changes where the actions appear in
-    Stream Deck's action list. Files: audio-switcher-exe/sdPlugin/manifest.json.cmake and
-    com.morgan-scruggs.audioswitcherplus-node.sdPlugin/manifest.json.
+[x] README "Getting Help" section - rewritten: contact via GitHub issues, may be slow, mainly for
+    personal use (no longer contradicts the issue templates).
+
+[x] Plugin category name - renamed to "Audio Switcher Plus" / "Audio Switcher Plus (Node)" to match
+    the plugin names, clearing Elgato's validator warning. (Needs a rebuild/redeploy to show up in
+    Stream Deck's action list.)
 
 
 Build / maintenance

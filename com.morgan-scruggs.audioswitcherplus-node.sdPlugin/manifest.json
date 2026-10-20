@@ -44,7 +44,7 @@
 	"Description": "Toggle or set the active audio devices (Node/no-standalone-exe build). Fork of Fred Emmott's Audio Switcher (github.com/fredemmott).",
 	"Name": "Audio Switcher Plus (Node)",
 	"Icon": "AudioDevicesIcons/headphones",
-	"Category": "Audio Devices Plus (Node)",
+	"Category": "Audio Switcher Plus (Node)",
 	"CategoryIcon": "AudioDevicesIcons/speaker",
 	"Version": "0.1.1.0",
 	"OS": [

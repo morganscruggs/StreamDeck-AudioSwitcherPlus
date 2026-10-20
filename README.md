@@ -36,9 +36,7 @@ This fork does not support macOS - the upstream project did, but maintaining and
 
 ## Getting Help
 
-Check the relevant troubleshooting guide ([exe](audio-switcher-exe/TROUBLESHOOTING.md) / [node](audio-switcher-node/TROUBLESHOOTING.md)). I make this for my own use, and share in the hope that others find it useful - I am unable to offer support, or to act on bug reports or feature requests. Do not contact me for help via any means, including GitHub, Discord, Twitter, Reddit, or email. This software is used by many, and I do generally fix it when something changes to break it, but I do not guarantee this, and I'm not able to help with anyone's specific issues.
-
-If 'fuzzy matching' is required - or not functioning properly for you - ask your device manufacturer to fix their device/drivers to not change device IDs; Microsoft requires that these do not change.
+Check the relevant troubleshooting guide first ([exe](audio-switcher-exe/TROUBLESHOOTING.md) / [node](audio-switcher-node/TROUBLESHOOTING.md)). If that doesn't help, you can reach me through GitHub by [opening an issue](https://github.com/morganscruggs/StreamDeck-AudioSwitcher/issues) - but I make this mainly for my own use, and share it in the hope that others find it useful, so I may be slow to respond.
 
 ## Thanks
 

@@ -37,7 +37,7 @@
   "Name": "Audio Switcher Plus",
   "PropertyInspectorPath": "propertyinspector/index.html",
   "Icon": "AudioDevicesIcons/headphones",
-  "Category": "Audio Devices Plus",
+  "Category": "Audio Switcher Plus",
   "CategoryIcon": "AudioDevicesIcons/speaker",
   "Version": "${CMAKE_PROJECT_VERSION}",
   "OS": [
