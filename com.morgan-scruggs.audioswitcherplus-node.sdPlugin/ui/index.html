@@ -12,19 +12,19 @@
     }
     * { box-sizing: border-box; }
     body {
-      margin: 0; padding: 8px 12px 24px;
+      margin: 0; padding: 6px 10px 10px;
       background: var(--bg); color: var(--fg);
-      font: 9pt/1.5 "Segoe UI", Arial, sans-serif;
+      font: 9pt/1.35 "Segoe UI", Arial, sans-serif;
     }
     .hidden { display: none !important; }
 
     details {
       border: 1px solid var(--line); border-radius: 5px;
-      margin-bottom: 6px; background: #333;
+      margin-bottom: 4px; background: #333;
     }
     details[open] { background: #313131; }
     summary {
-      cursor: pointer; padding: 7px 10px; font-weight: 600;
+      cursor: pointer; padding: 5px 10px; font-weight: 600;
       letter-spacing: .04em; text-transform: uppercase; font-size: 8pt;
       color: #bfbfbf; user-select: none; list-style: none;
     }
@@ -32,30 +32,30 @@
     summary::before { content: "▸ "; color: var(--muted); }
     details[open] > summary::before { content: "▾ "; }
     details[open] > summary { border-bottom: 1px solid var(--line); }
-    .body { padding: 8px 10px 10px; }
+    .body { padding: 6px 10px 4px; }
 
-    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
     .row > label:first-child {
       flex: 0 0 82px; text-align: right; color: var(--muted); font-size: 8.5pt;
     }
     .row > .ctl { flex: 1 1 auto; min-width: 0; display: flex; gap: 6px; align-items: center; }
-    .stack { display: block; margin-bottom: 8px; }
-    .stack > label { display: block; color: var(--muted); font-size: 8.5pt; margin-bottom: 3px; }
+    .stack { display: block; margin-bottom: 5px; }
+    .stack > label { display: block; color: var(--muted); font-size: 8.5pt; margin-bottom: 2px; }
 
     select {
       background: var(--field); color: var(--fg); border: 1px solid #4a4a4a;
-      border-radius: 4px; padding: 4px 6px; font: inherit; width: 100%; min-width: 0;
+      border-radius: 4px; padding: 2px 6px; font: inherit; width: 100%; min-width: 0;
     }
     select:focus, input:focus { outline: 1px solid var(--accent); }
     input[type="color"] {
-      width: 34px; height: 24px; padding: 1px; border: 1px solid #4a4a4a;
+      width: 34px; height: 20px; padding: 1px; border: 1px solid #4a4a4a;
       border-radius: 4px; background: var(--field); flex: 0 0 34px;
     }
     .ctl > span { color: var(--muted); font-size: 8.5pt; }
 
     button {
       background: #4a4a4a; color: var(--fg); border: 1px solid #565656;
-      border-radius: 4px; padding: 4px 9px; font: inherit; cursor: pointer; white-space: nowrap;
+      border-radius: 4px; padding: 2px 9px; font: inherit; cursor: pointer; white-space: nowrap;
     }
     button:hover { background: #565656; }
     button.link {
@@ -68,26 +68,40 @@
     .seg { display: flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
     .seg input { display: none; }
     .seg label {
-      background: #333; color: var(--muted); padding: 4px 12px; font-size: 8.5pt;
+      background: #333; color: var(--muted); padding: 2px 12px; font-size: 8.5pt;
       cursor: pointer; user-select: none; border-right: 1px solid var(--line);
     }
     .seg label:last-child { border-right: 0; }
     .seg input:checked + label { background: #46617f; color: #eaf2fb; }
 
-    .check { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 6px; }
-    .check input { accent-color: var(--accent); margin-top: 3px; }
+    .check { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 3px; }
+    .check input { accent-color: var(--accent); margin-top: 2px; }
     .check label { cursor: pointer; }
 
-    .hint { color: var(--muted); font-size: 8pt; margin: -2px 0 8px 90px; }
+    /* Explanations stay hidden unless "Show help text" is ticked (stored in global settings). */
+    .hint { display: none; color: var(--muted); font-size: 8pt; margin: -1px 0 5px 90px; }
     .hint.full { margin-left: 0; }
+    .hint.check-hint { margin-left: 19px; }
+    body.show-help .hint { display: block; }
+    .help-toggle { margin-top: 6px; }
 
     /* The chosen device, in full: the <select> is too narrow to show more than a name's head. */
     .card {
-      margin: -2px 0 10px 90px; padding: 7px 9px; border-radius: 4px;
+      margin: 0 0 4px; padding: 4px 8px; border-radius: 4px;
       background: #2a2a2a; border: 1px solid var(--line);
     }
+    .card-heading { color: var(--muted); font-size: 8pt; margin-bottom: 2px; }
+
+    /* "Device details" sits inside the Device section, so it's quieter than a top-level section. */
+    details.sub { margin-bottom: 5px; background: #2d2d2d; }
+    details.sub[open] { background: #2d2d2d; }
+    details.sub > summary {
+      padding: 3px 8px; font-weight: normal; text-transform: none; letter-spacing: 0;
+      font-size: 8.5pt; color: var(--muted);
+    }
+    details.sub > .body { padding: 4px 8px 0; }
     .card .name { color: #e4e4e4; font-size: 8.5pt; font-weight: 600; overflow-wrap: anywhere; }
-    .card dl { margin: 5px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 1px 8px; }
+    .card dl { margin: 2px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 1px 8px; }
     .card dt { color: var(--muted); font-size: 8pt; white-space: nowrap; }
     .card dd { margin: 0; font-size: 8pt; color: #cfcfcf; overflow-wrap: anywhere; }
     .card dd.mono { font-family: Consolas, "Courier New", monospace; font-size: 7.5pt; color: #b9c9d8; user-select: text; }
@@ -110,12 +124,10 @@
     .grid button:hover { background: #1c1c23; border-color: #4d4d5a; }
     .grid button.on { border-color: var(--accent); background: #1e2033; }
     .grid button img { width: 30px; height: 30px; display: block; object-fit: contain; }
-    .grid button span { font-size: 7pt; color: var(--muted); }
-    .grid button.on span { color: #cfe0f5; }
 
     footer {
-      margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line);
-      text-align: center; color: var(--muted); font-size: 7.5pt; line-height: 1.7;
+      margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--line);
+      text-align: center; color: var(--muted); font-size: 7.5pt; line-height: 1.4;
     }
     footer #version { display: block; font-variant-numeric: tabular-nums; }
   </style>
@@ -127,13 +139,24 @@
     <details open>
       <summary id="devicesSummary">Device</summary>
       <div class="body">
+        <details class="sub" id="deviceDetails" ontoggle="updateDeviceDetailsOpen();">
+          <summary>Device details</summary>
+          <div class="body">
+            <div class="card-heading" id="primaryDeviceInfoHeading">Primary</div>
+            <div class="card" id="primaryDeviceInfo"></div>
+            <div id="secondaryDeviceInfoDiv">
+              <div class="card-heading">Secondary</div>
+              <div class="card" id="secondaryDeviceInfo"></div>
+            </div>
+          </div>
+        </details>
+
         <div class="row">
           <label id="primaryDeviceLabel" for="primaryDevice">Device</label>
           <div class="ctl">
             <select id="primaryDevice" onchange="saveSettings();"></select>
           </div>
         </div>
-        <div class="card" id="primaryDeviceInfo"></div>
 
         <div id="secondaryDeviceDiv">
           <div class="row">
@@ -142,8 +165,18 @@
               <select id="secondaryDevice" onchange="saveSettings();"></select>
             </div>
           </div>
-          <div class="card" id="secondaryDeviceInfo"></div>
         </div>
+
+        <div class="check">
+          <input id="hideUnavailable" type="checkbox" onchange="updateHideUnavailable();" />
+          <label for="hideUnavailable">Hide disabled and unplugged devices</label>
+        </div>
+        <div class="hint check-hint">Leaves disabled and unplugged devices out of the list. Devices Windows no longer sees are never listed.</div>
+        <div class="check">
+          <input id="hideDeviceType" type="checkbox" onchange="updateHideDeviceType();" />
+          <label for="hideDeviceType">Hide device type</label>
+        </div>
+        <div class="hint check-hint">Lists devices by interface name only, without the device type (endpoint name). A device renamed in Windows keeps its name in the list unless this is ticked.</div>
       </div>
     </details>
 
@@ -178,23 +211,24 @@
         <div class="hint">Default is what Windows plays or records with. Communications is what calling apps use. All sets both.</div>
 
         <div class="row">
-          <label for="matchStrategy">Matching</label>
+          <label>Matching</label>
           <div class="ctl">
-            <select id="matchStrategy" onchange="saveSettings();">
-              <option value="Fuzzy">Fuzzy — follow the device when Windows renumbers it</option>
-              <option value="ID">Exact — this endpoint ID only</option>
-            </select>
+            <div class="seg">
+              <input id="fuzzyMatch" type="radio" name="matchStrategy" value="Fuzzy" onchange="saveSettings();" />
+              <label for="fuzzyMatch">Fuzzy</label>
+              <input id="exactMatch" type="radio" name="matchStrategy" value="ID" onchange="saveSettings();" />
+              <label for="exactMatch">Exact</label>
+            </div>
           </div>
         </div>
-        <div class="hint">Windows gives a re-plugged device a new ID and a "2-" prefix. Fuzzy finds it again by name.</div>
+        <div class="hint">Fuzzy follows the device when Windows renumbers it; Exact uses this endpoint ID only. Windows gives a re-plugged device a new ID and a "2-" prefix, and Fuzzy finds it again by name.</div>
       </div>
     </details>
 
     <details open>
-      <summary>Appearance</summary>
+      <summary>Icon appearance</summary>
       <div class="body">
         <div class="stack" id="iconDiv">
-          <label>Icon</label>
           <div class="grid" id="iconPicker"></div>
         </div>
         <div class="row" id="iconColorDiv">
@@ -209,11 +243,11 @@
         </div>
 
         <div class="stack" id="primaryIconDiv">
-          <label>Primary icon</label>
+          <label>Primary</label>
           <div class="grid" id="primaryIconPicker"></div>
         </div>
         <div class="stack" id="secondaryIconDiv">
-          <label>Secondary icon</label>
+          <label>Secondary</label>
           <div class="grid" id="secondaryIconPicker"></div>
         </div>
         <div class="row" id="toggleIconColorDiv">
@@ -230,20 +264,10 @@
       </div>
     </details>
 
-    <details>
-      <summary>Device list</summary>
-      <div class="body">
-        <div class="check">
-          <input id="hideUnavailable" type="checkbox" onchange="updateHideUnavailable();" />
-          <label for="hideUnavailable">Hide disabled and unplugged devices</label>
-        </div>
-        <div class="check">
-          <input id="hideDeviceType" type="checkbox" onchange="updateHideDeviceType();" />
-          <label for="hideDeviceType">Hide the endpoint name, show only the interface</label>
-        </div>
-        <div class="hint full">Devices Windows no longer sees are never listed. Renamed endpoints keep their name unless hidden here.</div>
-      </div>
-    </details>
+    <div class="check help-toggle">
+      <input id="showHelp" type="checkbox" onchange="updateShowHelp();" />
+      <label for="showHelp">Show help text</label>
+    </div>
 
     <footer>
       <span id="version"></span>
@@ -443,11 +467,8 @@
         option.onclick = () => selectIcon(pickerId, settingsKey, defaultId, icon.id);
         const img = document.createElement('img');
         img.src = `../AudioDevicesIcons/${icon.id}.png`;
-        img.alt = '';
+        img.alt = icon.label;
         option.appendChild(img);
-        const span = document.createElement('span');
-        span.textContent = icon.label;
-        option.appendChild(span);
         picker.appendChild(option);
       });
     }
@@ -516,13 +537,11 @@
       document.getElementById('allRole').checked = role === "all";
 
       const matchStrategy = settings.matchStrategy || "Fuzzy";
-      for (const child of document.getElementById('matchStrategy').children) {
-        if (child.value === matchStrategy) child.setAttribute("selected", "selected");
-        else child.removeAttribute("selected");
-      }
+      document.getElementById('exactMatch').checked = matchStrategy === "ID";
+      document.getElementById('fuzzyMatch').checked = matchStrategy !== "ID";
 
       document.getElementById('hideUnavailable').checked = settings.hideUnavailable !== false;
-      document.getElementById('hideDeviceType').checked = settings.hideDeviceType === true;
+      document.getElementById('hideDeviceType').checked = settings.hideDeviceType !== false;
 
       inputDevices = payload.inputDevices;
       outputDevices = payload.outputDevices;
@@ -546,7 +565,7 @@
       if (document.getElementById('allRole').checked) settings.role = 'all';
       else if (document.getElementById('communicationRole').checked) settings.role = 'communication';
       else settings.role = 'default';
-      settings.matchStrategy = document.getElementById('matchStrategy').value;
+      settings.matchStrategy = document.getElementById('exactMatch').checked ? 'ID' : 'Fuzzy';
       settings.hideUnavailable = document.getElementById('hideUnavailable').checked;
       settings.hideDeviceType = document.getElementById('hideDeviceType').checked;
       document.getElementById('primaryDevice').title = settings.primaryLabel || '';
@@ -561,6 +580,8 @@
       document.getElementById('devicesSummary').textContent = isSet ? 'Device' : 'Devices';
       document.getElementById('primaryDeviceLabel').textContent = isSet ? 'Device' : 'Primary';
       document.getElementById('secondaryDeviceDiv').classList.toggle('hidden', isSet);
+      document.getElementById('secondaryDeviceInfoDiv').classList.toggle('hidden', isSet);
+      document.getElementById('primaryDeviceInfoHeading').classList.toggle('hidden', isSet);
       document.getElementById('iconDiv').classList.toggle('hidden', !isSet);
       document.getElementById('iconColorDiv').classList.toggle('hidden', !isSet);
       document.getElementById('primaryIconDiv').classList.toggle('hidden', isSet);
@@ -580,14 +601,42 @@
       ws = new WebSocket(`ws://127.0.0.1:${port}`);
       ws.onopen = () => {
         ws.send(JSON.stringify({ event: registerEvent, uuid: inUUID }));
+        send("getGlobalSettings");
         send("sendToPlugin", { event: "getIconList" });
         send("sendToPlugin", { event: "getDeviceList" });
       };
       ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
         if (message.event === "sendToPropertyInspector") receivedDataFromPlugin(message);
+        else if (message.event === "didReceiveGlobalSettings") receivedGlobalSettings(message);
       };
     };
+
+    // "Show help text" is a global setting, so ticking it once applies to every button's panel.
+    var globalSettings = {};
+
+    function receivedGlobalSettings(message) {
+      globalSettings = (message.payload && message.payload.settings) || {};
+      const showHelp = globalSettings.showHelp === true;
+      document.getElementById('showHelp').checked = showHelp;
+      document.body.classList.toggle('show-help', showHelp);
+      document.getElementById('deviceDetails').open = globalSettings.deviceDetailsOpen === true;
+    }
+
+    // Whether "Device details" is expanded is remembered globally too, so it stays open across buttons.
+    function updateDeviceDetailsOpen() {
+      const open = document.getElementById('deviceDetails').open;
+      if (open === (globalSettings.deviceDetailsOpen === true)) return;
+      globalSettings.deviceDetailsOpen = open;
+      send("setGlobalSettings", globalSettings);
+    }
+
+    function updateShowHelp() {
+      const showHelp = document.getElementById('showHelp').checked;
+      document.body.classList.toggle('show-help', showHelp);
+      globalSettings.showHelp = showHelp;
+      send("setGlobalSettings", globalSettings);
+    }
   </script>
 </body>
 
