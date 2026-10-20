@@ -8,9 +8,11 @@ The native build ships its own compiled executable (`sdaudioswitchplus.exe`). On
 
 ## How device switching works
 
-There's no public Node API for enumerating audio devices or changing the default one, so this shells out to Microsoft-signed `powershell.exe` and runs inline C# (via `Add-Type`) doing raw COM interop - see [`src/audio-device-bridge.ts`](src/audio-device-bridge.ts). The COM interfaces used (`IMMDeviceEnumerator` and the undocumented `IPolicyConfigVista`) are the exact same ones the native build uses via its vendored `audiodevicelib` dependency - same GUIDs, same vtable order, just called from a different host process. `src/audio-device-service.ts` polls this bridge on an interval to keep button state in sync, since there's no way to get a real-time OS callback the way the native build's `IMMNotificationClient` does.
+There's no public Node API for enumerating audio devices or changing the default one, so this shells out to Microsoft-signed `powershell.exe` and runs inline C# (via `Add-Type`) doing raw COM interop - see [`src/audio-device-bridge.ts`](src/audio-device-bridge.ts). The COM interfaces used (`IMMDeviceEnumerator` and the undocumented `IPolicyConfigVista`) are the exact same ones the native build uses via its vendored `audiodevicelib` dependency - same GUIDs, same vtable order, just called from a different host process.
 
-**Trade-off:** every device switch and poll tick is a real `powershell.exe` process spawn (roughly half a second), so this build is noticeably less responsive than the native one. If that matters more to you than the Smart App Control issue, use [the exe build](../audio-switcher-exe/) instead.
+That PowerShell process is started once and kept running while any button is on screen (it exits a minute after the last one goes away): it compiles the C# once, then takes JSON requests on stdin and answers on stdout. It also registers the same `IMMNotificationClient` callback the native build uses, and relays each device or default-device change to `src/audio-device-service.ts`, which refreshes button state straight away. A 30-second poll stays on as a safety net (every 5 seconds if notifications can't be registered).
+
+**Trade-off:** the first request after the process starts waits for PowerShell to start and compile the C# (well under a second on a typical machine); after that, switches and updates are close to the native build's speed. If even that matters more to you than the Smart App Control issue, use [the exe build](../audio-switcher-exe/) instead.
 
 ## Feature parity
 

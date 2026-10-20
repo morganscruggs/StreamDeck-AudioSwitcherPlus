@@ -1,10 +1,6 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import type { AudioDeviceDirection, AudioDeviceRole, AudioSnapshot } from "./types";
-
-const execFileAsync = promisify(execFile);
-
-const DATA_FLOW: Record<AudioDeviceDirection, number> = { output: 0, input: 1 };
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { createInterface } from "node:readline";
+import type { AudioDeviceRole, AudioSnapshot } from "./types";
 
 // Only eConsole (0) and eCommunications (2) are ever used - confirmed from the original plugin's
 // AudioDevicesWindows.cpp: AudioDeviceRoleToERole() never maps to eMultimedia (1), and its
@@ -48,8 +44,37 @@ public interface IMMDeviceEnumerator
     [PreserveSig] int EnumAudioEndpoints(EDataFlow dataFlow, int dwStateMask, out IMMDeviceCollection ppDevices);
     [PreserveSig] int GetDefaultAudioEndpoint(EDataFlow dataFlow, ERole role, out IMMDevice ppEndpoint);
     [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string pwstrId, out IMMDevice ppDevice);
-    [PreserveSig] int RegisterEndpointNotificationCallback(IntPtr pClient);
-    [PreserveSig] int UnregisterEndpointNotificationCallback(IntPtr pClient);
+    [PreserveSig] int RegisterEndpointNotificationCallback(IMMNotificationClient pClient);
+    [PreserveSig] int UnregisterEndpointNotificationCallback(IMMNotificationClient pClient);
+}
+
+// Implemented below (not imported), so Windows can call back into this process when devices or defaults
+// change. Method order is the vtable order from mmdeviceapi.h.
+[Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IMMNotificationClient
+{
+    [PreserveSig] int OnDeviceStateChanged([MarshalAs(UnmanagedType.LPWStr)] string pwstrDeviceId, int dwNewState);
+    [PreserveSig] int OnDeviceAdded([MarshalAs(UnmanagedType.LPWStr)] string pwstrDeviceId);
+    [PreserveSig] int OnDeviceRemoved([MarshalAs(UnmanagedType.LPWStr)] string pwstrDeviceId);
+    [PreserveSig] int OnDefaultDeviceChanged(EDataFlow flow, ERole role, [MarshalAs(UnmanagedType.LPWStr)] string pwstrDefaultDeviceId);
+    [PreserveSig] int OnPropertyValueChanged([MarshalAs(UnmanagedType.LPWStr)] string pwstrDeviceId, PROPERTYKEY key);
+}
+
+// Each callback just tells the plugin "something changed" - it re-reads the whole snapshot (debounced),
+// which keeps all the state logic on the Node side. Property changes are ignored (they're frequent and
+// rarely matter; the plugin's safety-net poll picks up renames), as are eMultimedia default changes,
+// matching the C++ plugin.
+public class NotificationClient : IMMNotificationClient
+{
+    public int OnDeviceStateChanged(string pwstrDeviceId, int dwNewState) { AudioBridge.EmitChanged(); return 0; }
+    public int OnDeviceAdded(string pwstrDeviceId) { AudioBridge.EmitChanged(); return 0; }
+    public int OnDeviceRemoved(string pwstrDeviceId) { AudioBridge.EmitChanged(); return 0; }
+    public int OnDefaultDeviceChanged(EDataFlow flow, ERole role, string pwstrDefaultDeviceId)
+    {
+        if (role != ERole.eMultimedia) AudioBridge.EmitChanged();
+        return 0;
+    }
+    public int OnPropertyValueChanged(string pwstrDeviceId, PROPERTYKEY key) { return 0; }
 }
 
 [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
@@ -120,6 +145,44 @@ public static class AudioBridge
     static IMMDeviceEnumerator CreateEnumerator()
     {
         return (IMMDeviceEnumerator)new MMDeviceEnumeratorComObj();
+    }
+
+    // Replies (from the PowerShell loop's thread) and change events (from COM's notification threads)
+    // share stdout, so every line goes through here to keep them from interleaving.
+    static readonly object OutputLock = new object();
+
+    public static void Emit(string line)
+    {
+        lock (OutputLock)
+        {
+            Console.Out.WriteLine(line);
+            Console.Out.Flush();
+        }
+    }
+
+    public static void EmitChanged()
+    {
+        // Must not throw back into COM - if stdout is gone, the plugin is too, and the read loop's EOF
+        // will end this process.
+        try { Emit("{\\"event\\":\\"changed\\"}"); } catch { }
+    }
+
+    // Kept in static fields so the registration (and the callback object) live as long as the process.
+    static IMMDeviceEnumerator notificationEnumerator;
+    static NotificationClient notificationClient;
+
+    public static bool StartNotifications()
+    {
+        try
+        {
+            notificationEnumerator = CreateEnumerator();
+            notificationClient = new NotificationClient();
+            return notificationEnumerator.RegisterEndpointNotificationCallback(notificationClient) == 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     static string GetStringProperty(IPropertyStore store, PROPERTYKEY key)
@@ -226,77 +289,204 @@ public static class AudioBridge
 }
 `;
 
-function buildScript(body: string): string {
-	// -MTA matches the original C++ plugin's own CoInitializeEx(NULL, COINIT_MULTITHREADED) apartment
-	// choice for these exact same COM calls.
-	return `
+/**
+ * The bridge process's whole program: compile the C# once, register for device-change notifications,
+ * then serve one JSON request per stdin line with one JSON reply per stdout line, until stdin closes.
+ * Request arguments (notably device IDs, which come from button settings and so can arrive via an
+ * imported profile) only ever travel as JSON data - never spliced into script text, where something
+ * like "$(...)" would execute.
+ *
+ * -MTA (below) matches the C++ plugin's CoInitializeEx(NULL, COINIT_MULTITHREADED) for these same COM
+ * calls, and lets the notification callbacks arrive on COM's own threads while this loop blocks on stdin.
+ *
+ * ConvertTo-Json always renders a Hashtable as a JSON object regardless of entry count (unlike a PS
+ * array), so the "devices" maps need no normalization on the Node side.
+ */
+const BRIDGE_SCRIPT = `
 $ErrorActionPreference = "Stop"
-[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 Add-Type -TypeDefinition @'
 ${CSHARP_SOURCE}
 '@
-try {
-${body}
-} catch {
-	Write-Output (@{ error = $_.Exception.Message } | ConvertTo-Json -Compress)
+$notifications = [AudioBridge]::StartNotifications()
+[AudioBridge]::Emit((@{ event = "ready"; notifications = $notifications } | ConvertTo-Json -Compress))
+while ($null -ne ($line = [Console]::In.ReadLine())) {
+	if ($line.Trim() -eq "") { continue }
+	$id = $null
+	try {
+		$request = $line | ConvertFrom-Json
+		$id = $request.id
+		if ($request.op -eq "snapshot") {
+			$result = @{
+				output = @{
+					devices = [AudioBridge]::ListDevices(0, "output")
+					defaultDeviceId = [AudioBridge]::GetDefaultId(0, 0)
+					communicationsDeviceId = [AudioBridge]::GetDefaultId(0, 2)
+				}
+				input = @{
+					devices = [AudioBridge]::ListDevices(1, "input")
+					defaultDeviceId = [AudioBridge]::GetDefaultId(1, 0)
+					communicationsDeviceId = [AudioBridge]::GetDefaultId(1, 2)
+				}
+			}
+		} elseif ($request.op -eq "setDefault") {
+			$result = @{ ok = [AudioBridge]::SetDefault([string]$request.deviceId, [int]$request.role) }
+		} else {
+			throw "Unknown request: $($request.op)"
+		}
+		[AudioBridge]::Emit((@{ id = $id; result = $result } | ConvertTo-Json -Depth 8 -Compress))
+	} catch {
+		[AudioBridge]::Emit((@{ id = $id; error = $_.Exception.Message } | ConvertTo-Json -Compress))
+	}
 }
 `;
-}
 
-async function runPowerShell(script: string, env?: Record<string, string>): Promise<string> {
-	const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-MTA", "-Command", script], {
-		timeout: 10000,
-		maxBuffer: 20 * 1024 * 1024,
-		env: env ? { ...process.env, ...env } : undefined
-	});
-	return stdout.trim();
-}
+// Generous because the first request after a (re)start also waits out the one-off Add-Type compile.
+const REQUEST_TIMEOUT_MS = 15000;
 
-const SNAPSHOT_SCRIPT = buildScript(`
-	$result = @{
-		output = @{
-			devices = [AudioBridge]::ListDevices(0, "output")
-			defaultDeviceId = [AudioBridge]::GetDefaultId(0, 0)
-			communicationsDeviceId = [AudioBridge]::GetDefaultId(0, 2)
-		}
-		input = @{
-			devices = [AudioBridge]::ListDevices(1, "input")
-			defaultDeviceId = [AudioBridge]::GetDefaultId(1, 0)
-			communicationsDeviceId = [AudioBridge]::GetDefaultId(1, 2)
-		}
-	}
-	Write-Output ($result | ConvertTo-Json -Depth 6 -Compress)
-`);
+type PendingRequest = {
+	resolve: (result: unknown) => void;
+	reject: (error: Error) => void;
+	timer: ReturnType<typeof setTimeout>;
+};
 
-/** Fetches the full device list plus current default/communications device IDs for both directions. */
-export async function getSnapshot(): Promise<AudioSnapshot> {
-	const stdout = await runPowerShell(SNAPSHOT_SCRIPT);
-	const parsed = JSON.parse(stdout);
-	if (parsed.error) throw new Error(`Audio bridge error: ${parsed.error}`);
+type BridgeProcess = {
+	child: ChildProcessWithoutNullStreams;
+	pending: Map<number, PendingRequest>;
+};
 
-	// ConvertTo-Json renders an empty Hashtable as {} (fine) but a *single-key* Hashtable's "devices"
-	// value round-trips correctly since Hashtable (unlike a PS array) always serializes as a JSON
-	// object regardless of entry count - so no extra normalization is needed here.
-	return parsed as AudioSnapshot;
-}
+export type AudioBridgeOptions = {
+	/** Called (undebounced - Windows raises bursts) when devices or default devices change. */
+	onChanged?: () => void;
+	/** Called once per process start, saying whether change notifications could be registered. */
+	onReady?: (notifications: boolean) => void;
+	/** Unexpected output from the bridge process (stderr, or stdout that isn't a protocol line). */
+	onLog?: (message: string) => void;
+};
 
 /**
- * Sets the default endpoint for one role. The device ID itself already implies a direction (a render
- * vs. capture endpoint), so no separate direction argument is needed here. For ButtonRole "all", call
- * this twice (once with role "default", once with "communication").
+ * A long-lived `powershell.exe` running {@link BRIDGE_SCRIPT}, so each request costs an in-process COM
+ * call rather than a fresh PowerShell start plus C# compile. Started on the first request, and restarted
+ * on the next request if it dies (pending requests are rejected) or hangs (requests time out, and the
+ * process is killed).
  */
-export async function setDefaultDevice(role: AudioDeviceRole, deviceId: string): Promise<boolean> {
-	// The device ID comes from button settings (which can arrive via an imported profile), so it's
-	// passed through the environment rather than spliced into the script - interpolating it into a
-	// PowerShell string would let something like "$(...)" execute.
-	const script = buildScript(`
-		$ok = [AudioBridge]::SetDefault($env:AUDIO_SWITCHER_DEVICE_ID, ${ROLE[role]})
-		Write-Output (@{ ok = $ok } | ConvertTo-Json -Compress)
-	`);
-	const stdout = await runPowerShell(script, { AUDIO_SWITCHER_DEVICE_ID: deviceId });
-	const parsed = JSON.parse(stdout);
-	if (parsed.error) throw new Error(`Audio bridge error: ${parsed.error}`);
-	return !!parsed.ok;
-}
+export class AudioBridge {
+	private readonly options: AudioBridgeOptions;
+	private process: BridgeProcess | undefined;
+	private nextId = 1;
+	private notifications: boolean | undefined;
 
-export { DATA_FLOW, ROLE };
+	constructor(options: AudioBridgeOptions = {}) {
+		this.options = options;
+	}
+
+	/** Whether the running process has change notifications registered; undefined until it reports in. */
+	get notificationsActive(): boolean | undefined {
+		return this.notifications;
+	}
+
+	/** Fetches the full device list plus current default/communications device IDs for both directions. */
+	async getSnapshot(): Promise<AudioSnapshot> {
+		return (await this.request("snapshot")) as AudioSnapshot;
+	}
+
+	/**
+	 * Sets the default endpoint for one role. The device ID itself already implies a direction (a render
+	 * vs. capture endpoint), so no separate direction argument is needed here. For ButtonRole "all", call
+	 * this twice (once with role "default", once with "communication").
+	 */
+	async setDefaultDevice(role: AudioDeviceRole, deviceId: string): Promise<boolean> {
+		const result = (await this.request("setDefault", { role: ROLE[role], deviceId })) as { ok?: boolean };
+		return !!result.ok;
+	}
+
+	/** Ends the process (closing its stdin ends the read loop); the next request starts a new one. */
+	stop(): void {
+		const proc = this.process;
+		if (!proc) return;
+		this.process = undefined;
+		this.notifications = undefined;
+		proc.child.stdin.end();
+		setTimeout(() => proc.child.kill(), 2000).unref();
+	}
+
+	private request(op: string, args: Record<string, unknown> = {}): Promise<unknown> {
+		const proc = this.ensureStarted();
+		const id = this.nextId++;
+		return new Promise((resolve, reject) => {
+			const timer = setTimeout(() => {
+				proc.pending.delete(id);
+				reject(new Error(`Audio bridge timed out on "${op}"`));
+				// Something's wedged - start fresh on the next request.
+				if (this.process === proc) this.process = undefined;
+				proc.child.kill();
+			}, REQUEST_TIMEOUT_MS);
+			proc.pending.set(id, { resolve, reject, timer });
+			proc.child.stdin.write(`${JSON.stringify({ id, op, ...args })}\n`);
+		});
+	}
+
+	private ensureStarted(): BridgeProcess {
+		if (this.process) return this.process;
+
+		const child = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-MTA", "-Command", BRIDGE_SCRIPT], {
+			stdio: "pipe",
+			windowsHide: true
+		});
+		const proc: BridgeProcess = { child, pending: new Map() };
+		this.process = proc;
+		this.notifications = undefined;
+
+		createInterface({ input: child.stdout }).on("line", (line) => this.onLine(proc, line));
+		createInterface({ input: child.stderr }).on("line", (line) => {
+			if (line.trim()) this.options.onLog?.(`Audio bridge stderr: ${line}`);
+		});
+		// Writes after the process has died fail with EPIPE; the "exit" handler does the cleanup.
+		child.stdin.on("error", () => undefined);
+		child.on("error", (error) => this.onExit(proc, error));
+		child.on("exit", (code, signal) => this.onExit(proc, new Error(`Audio bridge exited (${signal ?? `code ${code}`})`)));
+		return proc;
+	}
+
+	private onLine(proc: BridgeProcess, line: string): void {
+		if (!line.trim()) return;
+
+		let message: { id?: number; event?: string; notifications?: boolean; result?: unknown; error?: string };
+		try {
+			message = JSON.parse(line);
+		} catch {
+			this.options.onLog?.(`Audio bridge output: ${line}`);
+			return;
+		}
+
+		if (message.event === "changed") {
+			this.options.onChanged?.();
+			return;
+		}
+		if (message.event === "ready") {
+			if (this.process === proc) this.notifications = !!message.notifications;
+			this.options.onReady?.(!!message.notifications);
+			return;
+		}
+
+		const pending = message.id === undefined ? undefined : proc.pending.get(message.id);
+		if (!pending) return;
+		proc.pending.delete(message.id!);
+		clearTimeout(pending.timer);
+		if (message.error) pending.reject(new Error(`Audio bridge error: ${message.error}`));
+		else pending.resolve(message.result);
+	}
+
+	private onExit(proc: BridgeProcess, error: Error): void {
+		if (this.process === proc) {
+			this.process = undefined;
+			this.notifications = undefined;
+		}
+		for (const pending of proc.pending.values()) {
+			clearTimeout(pending.timer);
+			pending.reject(error);
+		}
+		proc.pending.clear();
+	}
+}

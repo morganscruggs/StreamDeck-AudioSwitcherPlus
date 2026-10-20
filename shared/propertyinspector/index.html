@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>Audio Switcher Plus (Node)</title>
+  <title>Audio Switcher Plus</title>
   <style>
     /* The panel's look, written by hand: no sdpi.css, no CDN, nothing to fetch to open it. */
     :root {
@@ -271,16 +271,18 @@
 
     <footer>
       <span id="version"></span>
-      <em>Audio Switcher Plus (Node) · a fork of Fred Emmott's Audio Switcher, extended by Morgan Scruggs</em>
+      <em><span id="pluginName">Audio Switcher Plus</span> · a fork of Fred Emmott's Audio Switcher, extended by Morgan Scruggs</em>
     </footer>
   </div>
 
   <script>
-    // Ported from the original C++ plugin's propertyinspector/index.html; the DOM/settings logic is
-    // the same, only the transport is the plain Stream Deck WebSocket (no sdpi-components, no CDN).
+    // One copy for both plugins - each build copies it in from shared/propertyinspector/. Their action
+    // UUIDs differ only in prefix, so the action is told apart by its ".set"/".toggle" suffix. Talks to
+    // Stream Deck over the plain WebSocket, so it needs neither common.js nor sdpi.css.
     var ws,
       piUUID,
       actionInfo,
+      isSetAction,
       inputDevices,
       outputDevices,
       availableIcons,
@@ -295,7 +297,8 @@
     function stripNumberPrefix(name) {
       // Windows likes to replace "Foo" with "2- Foo", either as the whole
       // interface name or embedded as "Endpoint (2- Foo)"; mirrors
-      // fuzzifyInterface() in device-match.ts, but for display only.
+      // FuzzifyInterface() in ButtonSettings.cpp and fuzzifyInterface() in
+      // device-match.ts, but for display only.
       return name.replace(/(^|\()[0-9]+- /, '$1');
     }
 
@@ -480,9 +483,9 @@
     }
 
     function renderAllIconPickers() {
-      if (actionInfo === "com.morgan-scruggs.audioswitcherplus-node.set") {
+      if (isSetAction) {
         renderIconPicker('iconPicker', 'icon', 'headphones');
-      } else if (actionInfo === "com.morgan-scruggs.audioswitcherplus-node.toggle") {
+      } else {
         renderIconPicker('primaryIconPicker', 'primaryIcon', 'headphones');
         renderIconPicker('secondaryIconPicker', 'secondaryIcon', 'speaker');
       }
@@ -576,17 +579,16 @@
     }
 
     function setupForAction() {
-      const isSet = actionInfo === "com.morgan-scruggs.audioswitcherplus-node.set";
-      document.getElementById('devicesSummary').textContent = isSet ? 'Device' : 'Devices';
-      document.getElementById('primaryDeviceLabel').textContent = isSet ? 'Device' : 'Primary';
-      document.getElementById('secondaryDeviceDiv').classList.toggle('hidden', isSet);
-      document.getElementById('secondaryDeviceInfoDiv').classList.toggle('hidden', isSet);
-      document.getElementById('primaryDeviceInfoHeading').classList.toggle('hidden', isSet);
-      document.getElementById('iconDiv').classList.toggle('hidden', !isSet);
-      document.getElementById('iconColorDiv').classList.toggle('hidden', !isSet);
-      document.getElementById('primaryIconDiv').classList.toggle('hidden', isSet);
-      document.getElementById('secondaryIconDiv').classList.toggle('hidden', isSet);
-      document.getElementById('toggleIconColorDiv').classList.toggle('hidden', isSet);
+      document.getElementById('devicesSummary').textContent = isSetAction ? 'Device' : 'Devices';
+      document.getElementById('primaryDeviceLabel').textContent = isSetAction ? 'Device' : 'Primary';
+      document.getElementById('secondaryDeviceDiv').classList.toggle('hidden', isSetAction);
+      document.getElementById('secondaryDeviceInfoDiv').classList.toggle('hidden', isSetAction);
+      document.getElementById('primaryDeviceInfoHeading').classList.toggle('hidden', isSetAction);
+      document.getElementById('iconDiv').classList.toggle('hidden', !isSetAction);
+      document.getElementById('iconColorDiv').classList.toggle('hidden', !isSetAction);
+      document.getElementById('primaryIconDiv').classList.toggle('hidden', isSetAction);
+      document.getElementById('secondaryIconDiv').classList.toggle('hidden', isSetAction);
+      document.getElementById('toggleIconColorDiv').classList.toggle('hidden', isSetAction);
     }
 
     window.connectElgatoStreamDeckSocket = function (port, inUUID, registerEvent, inInfo, inActionInfo) {
@@ -594,8 +596,12 @@
       const info = JSON.parse(inInfo);
       const action = JSON.parse(inActionInfo);
       actionInfo = action.action;
+      isSetAction = actionInfo.endsWith(".set");
       settings = (action.payload && action.payload.settings) ? action.payload.settings : {};
       document.getElementById('version').textContent = info.plugin && info.plugin.version ? `v${info.plugin.version}` : '';
+      if (info.plugin && info.plugin.uuid && info.plugin.uuid.endsWith("-node")) {
+        document.getElementById('pluginName').textContent = 'Audio Switcher Plus (Node)';
+      }
       setupForAction();
 
       ws = new WebSocket(`ws://127.0.0.1:${port}`);

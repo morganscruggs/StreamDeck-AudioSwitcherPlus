@@ -6,11 +6,13 @@ build/
 # Build output for both plugin variants - assembled fresh by each project's own build, then synced to
 # Stream Deck's real Plugins folder. See audio-switcher-exe/ and audio-switcher-node/ for the sources.
 # The exe's output folder is entirely generated (nothing there is hand-edited), so it's ignored whole;
-# the Node one mixes generated content (bin/, AudioDevicesIcons/) with real source (manifest.json, ui/,
-# LICENSE) that lives here permanently, so only the generated parts are ignored.
+# the Node one mixes generated content (bin/, plus AudioDevicesIcons/ and propertyinspector/ copied in
+# from shared/) with real source (manifest.json, LICENSE) that lives here permanently, so only the
+# generated parts are ignored.
 /com.morganscruggs.audioswitcherplus.sdPlugin/
 /com.morgan-scruggs.audioswitcherplus-node.sdPlugin/bin/
 /com.morgan-scruggs.audioswitcherplus-node.sdPlugin/AudioDevicesIcons/
+/com.morgan-scruggs.audioswitcherplus-node.sdPlugin/propertyinspector/
 
 # Windows Explorer thumbnail caches
 Thumbs.db

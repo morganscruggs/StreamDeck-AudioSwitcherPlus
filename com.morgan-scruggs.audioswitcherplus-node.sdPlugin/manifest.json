@@ -5,7 +5,7 @@
 			"UUID": "com.morgan-scruggs.audioswitcherplus-node.toggle",
 			"Icon": "AudioDevicesIcons/headphones",
 			"Tooltip": "Switch between two audio devices.",
-			"PropertyInspectorPath": "ui/index.html",
+			"PropertyInspectorPath": "propertyinspector/index.html",
 			"Controllers": [
 				"Keypad"
 			],
@@ -24,7 +24,7 @@
 			"UUID": "com.morgan-scruggs.audioswitcherplus-node.set",
 			"Icon": "AudioDevicesIcons/headphones",
 			"Tooltip": "Set a specific audio device",
-			"PropertyInspectorPath": "ui/index.html",
+			"PropertyInspectorPath": "propertyinspector/index.html",
 			"Controllers": [
 				"Keypad"
 			],

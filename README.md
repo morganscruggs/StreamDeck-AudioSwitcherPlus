@@ -11,14 +11,14 @@ This repo contains two separate, independently-installable builds of the same pl
 | | [`audio-switcher-exe/`](audio-switcher-exe/) | [`audio-switcher-node/`](audio-switcher-node/) |
 |---|---|---|
 | Runtime | Native C++, compiled to its own `sdaudioswitchplus.exe` | Node.js, running inside Stream Deck's own bundled Node runtime |
-| Device switching | Direct in-process COM calls | The same COM calls, via inline C# run through `powershell.exe` |
-| Responsiveness | Fast - real-time, in-process | Noticeably slower - each switch/poll is a fresh `powershell.exe` process |
+| Device switching | Direct in-process COM calls | The same COM calls, via inline C# in a long-running `powershell.exe` |
+| Responsiveness | Fast - real-time, in-process | Near-instant once running; the first request after it starts waits for PowerShell to start |
 | Windows Smart App Control | **Can be blocked** - it's a freshly-compiled, unsigned, no-reputation executable | Not affected - never launches its own executable, so there's nothing for Smart App Control to flag |
 | Status | Original, most mature | Newer, built specifically to sidestep the Smart App Control issue |
 
-Both install and run completely independently (different plugin UUIDs, different install folders), so you can have either or both active at once. If Smart App Control isn't a problem for you, the exe version is the more responsive choice; otherwise the Node version trades some responsiveness for not being blocked. See each folder's own README for setup, features, and its own troubleshooting guide.
+Both install and run completely independently (different plugin UUIDs, different install folders), so you can have either or both active at once. If Smart App Control isn't a problem for you, the exe version is the leaner choice (no PowerShell process alongside it); otherwise the Node version avoids being blocked at the cost of a short startup delay. See each folder's own README for setup, features, and its own troubleshooting guide.
 
-Shared, non-code assets (the button icons, and the `VERSION` file both plugins take their version from) live in [`shared/`](shared/) and are pulled in by both projects' build steps rather than duplicated.
+Shared assets (the button icons, the property inspector, and the `VERSION` file both plugins take their version from) live in [`shared/`](shared/) and are pulled in by both projects' build steps rather than duplicated.
 
 ## Building
 

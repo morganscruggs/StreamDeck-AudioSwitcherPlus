@@ -1,0 +1,51 @@
+TODO - StreamDeck-AudioSwitcher
+===============================
+
+Remaining improvements, roughly in priority order. Tick items off ([x]) or delete them as they're done.
+(Per AGENTS.md, code changes apply to both the exe and node versions unless noted.)
+
+
+Decisions to make
+-----------------
+
+[ ] FUNDING.yml - still points at fredemmott (inherited from the original). Keep it as credit to
+    the original author, point it at your own account, or delete it.
+
+[ ] README "Getting Help" section - still the original author's "I am unable to offer support, do
+    not contact me via any means" text, which contradicts this repo's bug-report and feature-request
+    issue templates. Rewrite it in your own words, or remove the issue templates.
+
+[ ] Plugin category name - both manifests use "Audio Devices Plus" / "Audio Devices Plus (Node)".
+    Elgato's validator warns that the category should match the plugin name ("Audio Switcher Plus" /
+    "Audio Switcher Plus (Node)"). Only a warning; renaming just changes where the actions appear in
+    Stream Deck's action list. Files: audio-switcher-exe/sdPlugin/manifest.json.cmake and
+    com.morgan-scruggs.audioswitcherplus-node.sdPlugin/manifest.json.
+
+
+Build / maintenance
+-------------------
+
+[ ] Exe CMake deprecation warnings - AudioDeviceLib.cmake and StreamDeckSDK.cmake call
+    FetchContent_Populate(), which CMake deprecates (CMP0169) and a future release will remove.
+    Switch to FetchContent_MakeAvailable(). Configure also prints CMP0177 (install DESTINATION
+    normalization) notices from the install() rules. Builds work today. (Exe only.)
+
+[ ] Confirm the first GitHub Actions run passes - the new CI (build-exe.yml, build-node.yml,
+    release.yml) has only been simulated locally. Check the Actions tab after the next push.
+
+[ ] Test a release - bump shared/VERSION, commit, push a matching tag (e.g. 0.1.2 or v0.1.2) and
+    check a draft release appears with both .streamDeckPlugin files and the .pdb attached.
+
+[ ] npm audit - 3 dev-only advisories (brace-expansion, fast-uri via @elgato/cli; serialize-javascript
+    via @rollup/plugin-terser). None ship in the plugin bundle. Dependabot should raise PRs; merge
+    them when they arrive. (Node only.)
+
+
+Optional
+--------
+
+[ ] Code-sign the exe - signing is what actually stops Windows Smart App Control from blocking
+    sdaudioswitchplus.exe (the reason the node version exists). A service such as Azure Trusted
+    Signing is relatively cheap; sign_target.cmake already supports passing signtool arguments via
+    SIGNTOOL_KEY_ARGS, and CI would need a signing step with the credentials as repo secrets.
+    Mainly worth it if the exe version is going to be shared with other people. (Exe only.)

@@ -27,7 +27,12 @@ Start-Process "C:\Program Files\Elgato\StreamDeck\StreamDeck.exe"
 
 ## Button presses or device-list updates feel slow
 
-This is expected, not a bug: every switch and every ~5-second background refresh spawns a real `powershell.exe` process to talk to Windows' audio APIs (there's no cheap native call available here), unlike [the native exe build](../audio-switcher-exe/), which does everything in-process. If responsiveness matters more to you than avoiding Smart App Control, use the exe build instead.
+The first press or update after the plugin's background `powershell.exe` starts (when a button first appears, or a minute after the last one went off screen) waits for PowerShell to start and compile its C# helper - that one should be well under a second. After that, things should be near-instant. If they stay slow:
+
+1. Check the plugin's log for `Audio device notifications unavailable` - without Windows' change notifications, button state only catches up on a 5-second poll.
+2. Check for `Audio bridge timed out` or `Audio bridge exited` entries - the process is being restarted, which usually means antivirus/EDR interference (see below).
+
+If responsiveness matters more to you than avoiding Smart App Control, use [the native exe build](../audio-switcher-exe/) instead.
 
 ## Devices are listed multiple times, or fuzzy matching picks the wrong one
 
@@ -39,8 +44,8 @@ The SDK's file logger appears to persist only `warn`/`error`-level entries to `<
 
 ## Antivirus or EDR software flags or blocks the plugin
 
-This build's whole reason for existing is to avoid Smart App Control blocking an unsigned exe - but repeatedly spawning `powershell.exe` with inline C# (`Add-Type`) is itself a pattern some antivirus/EDR heuristics watch for, since it's also a technique malware uses. If you hit this, it's a different (and generally less severe) kind of security-software friction than the one this build was built to avoid, not a sign the plugin is doing anything it shouldn't - but it means switching to this build isn't a guaranteed fix on every machine/security posture.
+This build's whole reason for existing is to avoid Smart App Control blocking an unsigned exe - but running `powershell.exe` with inline C# (`Add-Type`) is itself a pattern some antivirus/EDR heuristics watch for, since it's also a technique malware uses. If you hit this, it's a different (and generally less severe) kind of security-software friction than the one this build was built to avoid, not a sign the plugin is doing anything it shouldn't - but it means switching to this build isn't a guaranteed fix on every machine/security posture.
 
 ## PowerShell errors mentioning execution policy
 
-Device switching runs a script via `powershell.exe -Command "<script text>"`, not a `.ps1` file, so most execution-policy restrictions (which primarily gate script *files*) shouldn't apply - but if you see an execution-policy error in the plugin's log, check `Get-ExecutionPolicy -List` and whether your organization's policy blocks non-interactive command evaluation entirely.
+The plugin's background process runs a script via `powershell.exe -Command "<script text>"`, not a `.ps1` file, so most execution-policy restrictions (which primarily gate script *files*) shouldn't apply - but if you see an execution-policy error in the plugin's log, check `Get-ExecutionPolicy -List` and whether your organization's policy blocks non-interactive command evaluation entirely.

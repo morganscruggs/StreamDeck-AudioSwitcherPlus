@@ -54,17 +54,20 @@ const config = {
 			}
 		},
 		{
-			// The icon PNGs live once in ../shared/AudioDevicesIcons (also used by the C++ plugin's own
-			// build), rather than being duplicated into this project - Stream Deck plugins must be
-			// self-contained at runtime though, so each build copies them into this plugin's own folder.
-			name: "copy-shared-icons",
+			// The icon PNGs and the property inspector live once in ../shared (also used by the C++
+			// plugin's own build), rather than being duplicated into this project - Stream Deck plugins
+			// must be self-contained at runtime though, so each build copies them into this plugin's
+			// own folder.
+			name: "copy-shared-assets",
 			buildStart() {
-				const src = path.join("..", "shared", "AudioDevicesIcons");
-				const dest = path.join(sdPlugin, "AudioDevicesIcons");
-				fs.mkdirSync(dest, { recursive: true });
-				for (const file of fs.readdirSync(src)) {
-					this.addWatchFile(path.join(src, file));
-					fs.copyFileSync(path.join(src, file), path.join(dest, file));
+				for (const folder of ["AudioDevicesIcons", "propertyinspector"]) {
+					const src = path.join("..", "shared", folder);
+					const dest = path.join(sdPlugin, folder);
+					fs.mkdirSync(dest, { recursive: true });
+					for (const file of fs.readdirSync(src)) {
+						this.addWatchFile(path.join(src, file));
+						fs.copyFileSync(path.join(src, file), path.join(dest, file));
+					}
 				}
 			}
 		},

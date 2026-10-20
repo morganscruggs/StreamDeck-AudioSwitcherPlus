@@ -12,14 +12,10 @@ install(
   DESTINATION
   ${CMAKE_INSTALL_PREFIX}
 )
+# Shared with the Node plugin, whose build copies the same folders in.
 install(
   DIRECTORY
-  propertyinspector
-  DESTINATION
-  ${CMAKE_INSTALL_PREFIX}
-)
-install(
-  DIRECTORY
+  ../../shared/propertyinspector
   ../../shared/AudioDevicesIcons
   DESTINATION
   ${CMAKE_INSTALL_PREFIX}
