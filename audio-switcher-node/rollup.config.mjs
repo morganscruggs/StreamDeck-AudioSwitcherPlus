@@ -33,6 +33,27 @@ const config = {
 			},
 		},
 		{
+			// The plugin version lives once in ../shared/VERSION (also read by the C++ plugin's CMake), with
+			// the CI run number as the fourth component, as there. manifest.json is hand-edited source, so
+			// it's only rewritten when the version actually differs, keeping its existing line endings.
+			name: "stamp-manifest-version",
+			buildStart() {
+				const versionFile = path.join("..", "shared", "VERSION");
+				this.addWatchFile(versionFile);
+				const version = `${fs.readFileSync(versionFile, "utf8").trim()}.${process.env.GITHUB_RUN_NUMBER ?? 0}`;
+
+				const manifestPath = path.join(sdPlugin, "manifest.json");
+				const text = fs.readFileSync(manifestPath, "utf8");
+				const manifest = JSON.parse(text);
+				if (manifest.Version === version) return;
+
+				manifest.Version = version;
+				const eol = text.includes("\r\n") ? "\r\n" : "\n";
+				fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, "\t").replace(/\n/g, eol) + eol);
+				console.log(`Stamped manifest.json with version ${version}`);
+			}
+		},
+		{
 			// The icon PNGs live once in ../shared/AudioDevicesIcons (also used by the C++ plugin's own
 			// build), rather than being duplicated into this project - Stream Deck plugins must be
 			// self-contained at runtime though, so each build copies them into this plugin's own folder.
@@ -52,9 +73,11 @@ const config = {
 			// project. If that folder is a symlink back to this project, Stream Deck already sees
 			// every build - skip copying (copying a folder onto itself would error). Otherwise,
 			// mirror the freshly built plugin into it so a plain `npm run build` stays the only
-			// step ever needed.
+			// step ever needed. Set SYNC_TO_STREAMDECK=0 to skip this (CI/packaging builds), matching
+			// the C++ plugin's SYNC_TO_STREAMDECK CMake option.
 			name: "sync-to-streamdeck",
 			writeBundle() {
+				if (process.env.SYNC_TO_STREAMDECK === "0") return;
 				const appData = process.env.APPDATA;
 				if (!appData) return;
 

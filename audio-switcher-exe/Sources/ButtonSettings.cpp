@@ -11,6 +11,7 @@
 #include "audio_json.h"
 
 #include <regex>
+#include <vector>
 
 NLOHMANN_JSON_SERIALIZE_ENUM(
   DeviceMatchStrategy,
@@ -154,21 +155,34 @@ std::string GetVolatileID(
   const auto fuzzyInterface = FuzzifyInterface(device.interfaceName);
   ESDDebug("Looking for a fuzzy match: {} -> {}", device.interfaceName, fuzzyInterface);
 
+  std::vector<std::string> connectedOnSameInterface;
   for (const auto& [otherID, other] : GetAudioDeviceList(device.direction)) {
     if (other.state != AudioDeviceState::CONNECTED) {
       continue;
     }
     const auto otherFuzzyInterface = FuzzifyInterface(other.interfaceName);
     ESDDebug("Trying {} -> {}", other.interfaceName, otherFuzzyInterface);
-    if (
-      fuzzyInterface == otherFuzzyInterface
-      && device.endpointName == other.endpointName) {
+    if (fuzzyInterface != otherFuzzyInterface) {
+      continue;
+    }
+    if (device.endpointName == other.endpointName) {
       ESDDebug(
         "Fuzzy device match for {}/{}",
         device.interfaceName,
         device.endpointName);
       return otherID;
     }
+    connectedOnSameInterface.push_back(otherID);
+  }
+  // A renumbered endpoint comes back with its factory name, so a user-renamed endpoint would never
+  // match again - if exactly one connected device shares the interface, that's the one. Mirrors
+  // getVolatileDeviceId() in the Node plugin's device-match.ts.
+  if (connectedOnSameInterface.size() == 1) {
+    ESDDebug(
+      "Fuzzy interface-only match for {}/{}",
+      device.interfaceName,
+      device.endpointName);
+    return connectedOnSameInterface.front();
   }
   ESDDebug(
     "Failed fuzzy match for {}/{}", device.interfaceName, device.endpointName);

@@ -11,3 +11,6 @@ build/
 /com.morganscruggs.audioswitcherplus.sdPlugin/
 /com.morgan-scruggs.audioswitcherplus-node.sdPlugin/bin/
 /com.morgan-scruggs.audioswitcherplus-node.sdPlugin/AudioDevicesIcons/
+
+# Windows Explorer thumbnail caches
+Thumbs.db

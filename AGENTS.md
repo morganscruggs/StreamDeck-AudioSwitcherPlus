@@ -7,7 +7,7 @@ This repo holds two independent implementations of the same plugin, kept at feat
 - **Native/exe (C++):** [`audio-switcher-exe/`](audio-switcher-exe/) - sources in `Sources/`, property inspector in `sdPlugin/propertyinspector/`.
 - **Node (TypeScript):** [`audio-switcher-node/`](audio-switcher-node/) - sources in `src/`; its property inspector lives in [`com.morgan-scruggs.audioswitcherplus-node.sdPlugin/ui/`](com.morgan-scruggs.audioswitcherplus-node.sdPlugin/ui/).
 
-Shared assets (button icons) are in [`shared/`](shared/). The untracked `com.morganscruggs.audioswitcherplus.sdPlugin/` at the repo root is exe build output - don't edit it.
+Shared assets (button icons, and the `VERSION` file both builds read their version from - bump it there, not in either manifest) are in [`shared/`](shared/). The untracked `com.morganscruggs.audioswitcherplus.sdPlugin/` at the repo root is exe build output - don't edit it.
 
 **Unless the user says otherwise, apply every change to both versions** - features, bug fixes, and UI/property-inspector changes alike - adapting to each one's language and structure rather than copying code verbatim. If a change genuinely only applies to one (e.g. a PowerShell-bridge issue in the node version, or a CMake/build issue in the exe version), say so rather than silently skipping the other. When reporting back, state which version(s) were changed.
 

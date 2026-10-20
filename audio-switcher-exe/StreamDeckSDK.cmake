@@ -13,20 +13,13 @@ if(NOT streamdecksdk_POPULATED)
   add_subdirectory("${streamdecksdk_SOURCE_DIR}" "${streamdecksdk_BINARY_DIR}" EXCLUDE_FROM_ALL)
 endif()
 
-if(APPLE)
-  set(
-    STREAMDECK_PLUGIN_DIR
-    "$ENV{HOME}/Library/Application Support/com.elgato.StreamDeck/Plugins"
-  )
-elseif(WIN32)
-  string(
-    REPLACE
-    "\\"
-    "/"
-    STREAMDECK_PLUGIN_DIR
-    "$ENV{appdata}/Elgato/StreamDeck/Plugins"
-  )
-endif()
+string(
+  REPLACE
+  "\\"
+  "/"
+  STREAMDECK_PLUGIN_DIR
+  "$ENV{appdata}/Elgato/StreamDeck/Plugins"
+)
 
 set(
   STREAMDECK_PLUGIN_DIR
@@ -34,16 +27,11 @@ set(
   CACHE PATH "Path to this system's streamdeck plugin directory"
 )
 
-function(set_default_install_dir_to_streamdeck_plugin_dir)
-  if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(
-      CMAKE_INSTALL_PREFIX
-      "${STREAMDECK_PLUGIN_DIR}/${CMAKE_PROJECT_NAME}"
-      CACHE PATH "See cmake documentation"
-      FORCE
-    )
-  endif()
-endfunction()
+option(
+  SYNC_TO_STREAMDECK
+  "Mirror the installed plugin into STREAMDECK_PLUGIN_DIR (turn off for CI/packaging builds)"
+  ON
+)
 
 # Installs into the repo's top-level directory (alongside audio-switcher-exe/, audio-switcher-node/,
 # shared/) rather than Stream Deck's own Plugins folder - mirrors where the Node project's build output
@@ -63,10 +51,19 @@ endfunction()
 # Registers a final install step that mirrors CMAKE_INSTALL_PREFIX's assembled plugin folder into
 # Stream Deck's real Plugins directory. Must be called after every other install() rule in the project
 # (install() rules run in declaration order), so Stream Deck always sees a complete, consistent copy.
+# Skipped when SYNC_TO_STREAMDECK is off, or when Stream Deck isn't installed (no Plugins folder) -
+# matching the Node project's rollup config.
 function(sync_install_to_streamdeck_plugin_dir)
+  if(NOT SYNC_TO_STREAMDECK)
+    return()
+  endif()
   install(CODE "
-    file(REMOVE_RECURSE \"${STREAMDECK_PLUGIN_DIR}/${CMAKE_PROJECT_NAME}\")
-    file(COPY \"${CMAKE_INSTALL_PREFIX}/\" DESTINATION \"${STREAMDECK_PLUGIN_DIR}/${CMAKE_PROJECT_NAME}\")
-    message(STATUS \"Synced plugin to ${STREAMDECK_PLUGIN_DIR}/${CMAKE_PROJECT_NAME}\")
+    if(EXISTS \"${STREAMDECK_PLUGIN_DIR}\")
+      file(REMOVE_RECURSE \"${STREAMDECK_PLUGIN_DIR}/${CMAKE_PROJECT_NAME}\")
+      file(COPY \"${CMAKE_INSTALL_PREFIX}/\" DESTINATION \"${STREAMDECK_PLUGIN_DIR}/${CMAKE_PROJECT_NAME}\")
+      message(STATUS \"Synced plugin to ${STREAMDECK_PLUGIN_DIR}/${CMAKE_PROJECT_NAME}\")
+    else()
+      message(STATUS \"Stream Deck Plugins folder not found - skipping sync\")
+    endif()
   ")
 endfunction()

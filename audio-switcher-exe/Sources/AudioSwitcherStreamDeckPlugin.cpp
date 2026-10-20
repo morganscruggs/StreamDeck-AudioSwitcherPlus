@@ -76,24 +76,6 @@ AudioDeviceRole AudioDeviceRoleFromButtonRole(const ButtonRole role) {
   }
 }
 
-bool IsRoleActive(
-  const ButtonSettings& settings,
-  const std::string& deviceID,
-  const std::string& defaultDeviceID = {}) {
-  if (settings.role == ButtonRole::ALL) {
-    const auto defaultID = defaultDeviceID.empty()
-      ? GetDefaultAudioDeviceID(settings.direction, AudioDeviceRole::DEFAULT)
-      : defaultDeviceID;
-    const auto communicationID = GetDefaultAudioDeviceID(
-      settings.direction,
-      AudioDeviceRole::COMMUNICATION);
-    return deviceID == defaultID || deviceID == communicationID;
-  }
-  return deviceID == GetDefaultAudioDeviceID(
-    settings.direction,
-    AudioDeviceRoleFromButtonRole(settings.role));
-}
-
 constexpr std::string_view SET_ACTION_ID{
   "com.morganscruggs.audioswitcherplus.set"};
 constexpr std::string_view TOGGLE_ACTION_ID{
@@ -293,7 +275,7 @@ void AudioSwitcherStreamDeckPlugin::OnDefaultDeviceChanged(
   AudioDeviceDirection direction,
   AudioDeviceRole role,
   const std::string& device) {
-  std::scoped_lock lock(mVisibleContextsMutex);
+  std::scoped_lock lock(mButtonsMutex);
   for (const auto& [context, button] : mButtons) {
     if (button.settings.direction != direction) {
       continue;
@@ -307,27 +289,21 @@ void AudioSwitcherStreamDeckPlugin::OnDefaultDeviceChanged(
   }
 }
 
-void AudioSwitcherStreamDeckPlugin::KeyDownForAction(
-  const std::string& inAction,
-  const std::string& inContext,
-  const json& inPayload,
-  const std::string& inDeviceID) {
-  const auto state = EPLJSONUtils::GetIntByName(inPayload, "state");
-}
-
 void AudioSwitcherStreamDeckPlugin::KeyUpForAction(
   const std::string& inAction,
   const std::string& inContext,
   const json& inPayload,
   const std::string& inDeviceID) {
   ESDDebug("{}: {}", __FUNCTION__, inPayload.dump());
-  std::scoped_lock lock(mVisibleContextsMutex);
+  std::scoped_lock lock(mButtonsMutex);
 
   if (!inPayload.contains("settings")) {
     return;
   }
-  auto& settings = mButtons[inContext].settings;
-  settings = inPayload.at("settings");
+  auto& button = mButtons[inContext];
+  button.rawSettings = inPayload.at("settings");
+  button.settings = button.rawSettings;
+  const auto& settings = button.settings;
   FillButtonDeviceInfo(inContext);
 
   const auto state = EPLJSONUtils::GetIntByName(inPayload, "state");
@@ -399,16 +375,15 @@ void AudioSwitcherStreamDeckPlugin::WillAppearForAction(
   const std::string& inContext,
   const json& inPayload,
   const std::string& inDeviceID) {
-  std::scoped_lock lock(mVisibleContextsMutex);
-  // Remember the context
-  mVisibleContexts.insert(inContext);
+  std::scoped_lock lock(mButtonsMutex);
   auto& button = mButtons[inContext];
   button = {inAction, inContext};
 
   if (!inPayload.contains("settings")) {
     return;
   }
-  button.settings = inPayload.at("settings");
+  button.rawSettings = inPayload.at("settings");
+  button.settings = button.rawSettings;
 
   UpdateState(inContext);
   FillButtonDeviceInfo(inContext);
@@ -417,13 +392,18 @@ void AudioSwitcherStreamDeckPlugin::WillAppearForAction(
 
 void AudioSwitcherStreamDeckPlugin::FillButtonDeviceInfo(
   const std::string& context) {
-  auto& settings = mButtons.at(context).settings;
+  auto& button = mButtons.at(context);
+  auto& settings = button.settings;
 
   const auto filledPrimary = FillAudioDeviceInfo(settings.primaryDevice);
   const auto filledSecondary = FillAudioDeviceInfo(settings.secondaryDevice);
   if (filledPrimary || filledSecondary) {
-    ESDDebug("Backfilling settings to {}", json(settings).dump());
-    mConnectionManager->SetSettings(settings, context);
+    // Merge over the original payload so keys ButtonSettings doesn't model survive the write-back.
+    auto merged = button.rawSettings.is_object() ? button.rawSettings : json::object();
+    merged.update(json(settings));
+    button.rawSettings = merged;
+    ESDDebug("Backfilling settings to {}", merged.dump());
+    mConnectionManager->SetSettings(merged, context);
   }
 }
 
@@ -521,9 +501,7 @@ void AudioSwitcherStreamDeckPlugin::WillDisappearForAction(
   const std::string& inContext,
   const json& inPayload,
   const std::string& inDeviceID) {
-  // Remove the context
-  std::scoped_lock lock(mVisibleContextsMutex);
-  mVisibleContexts.erase(inContext);
+  std::scoped_lock lock(mButtonsMutex);
   mButtons.erase(inContext);
 }
 
@@ -566,9 +544,13 @@ void AudioSwitcherStreamDeckPlugin::SendToPlugin(
 void AudioSwitcherStreamDeckPlugin::UpdateState(
   const std::string& context,
   const std::string& optionalDefaultDevice) {
-  const auto button = mButtons[context];
-  const auto action = button.action;
-  const auto settings = button.settings;
+  std::scoped_lock lock(mButtonsMutex);
+  const auto it = mButtons.find(context);
+  if (it == mButtons.end()) {
+    return;
+  }
+  const auto& action = it->second.action;
+  const auto& settings = it->second.settings;
   const auto primaryID = settings.VolatilePrimaryID();
   const auto secondaryID = settings.VolatileSecondaryID();
 
@@ -590,13 +572,8 @@ void AudioSwitcherStreamDeckPlugin::UpdateState(
       AudioDeviceRoleFromButtonRole(settings.role));
   }
 
-  std::scoped_lock lock(mVisibleContextsMutex);
   if (action == SET_ACTION_ID) {
-    mConnectionManager->SetState(
-      activeDevice == primaryID || (settings.role == ButtonRole::ALL && activeDevice == primaryID)
-        ? 0
-        : 1,
-      context);
+    mConnectionManager->SetState(activeDevice == primaryID ? 0 : 1, context);
     return;
   }
 

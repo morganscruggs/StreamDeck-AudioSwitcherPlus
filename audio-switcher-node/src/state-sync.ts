@@ -49,8 +49,26 @@ export async function backfillDeviceInfo(action: KeyAction<ButtonSettings>, sett
 	}
 }
 
-/** Mirrors UpdateState() in AudioSwitcherStreamDeckPlugin.cpp. */
-export function updateState(action: KeyAction<ButtonSettings>, kind: ActionKind, settings: ButtonSettings, snapshot: AudioSnapshot | undefined): void {
+// Last resolved active/primary/secondary IDs per action, so polling (which re-runs updateState every
+// tick, unlike the C++ plugin's change-driven callback) doesn't re-flash the alert every few seconds.
+const lastResolved = new Map<string, string>();
+
+/** Drops the per-action state kept by {@link updateState}; call when the action disappears. */
+export function forgetState(actionId: string): void {
+	lastResolved.delete(actionId);
+}
+
+/**
+ * Mirrors UpdateState() in AudioSwitcherStreamDeckPlugin.cpp. With `fromPoll`, the "neither device is
+ * active" alert is only shown when something actually changed since the last update.
+ */
+export function updateState(
+	action: KeyAction<ButtonSettings>,
+	kind: ActionKind,
+	settings: ButtonSettings,
+	snapshot: AudioSnapshot | undefined,
+	fromPoll = false
+): void {
 	const dirSnap = directionSnapshot(snapshot, settings.direction);
 	const primaryId = resolvePrimaryId(settings, snapshot);
 	const secondaryId = resolveSecondaryId(settings, snapshot);
@@ -67,6 +85,10 @@ export function updateState(action: KeyAction<ButtonSettings>, kind: ActionKind,
 		activeDevice = defaultIdForRole(dirSnap, settings.role);
 	}
 
+	const resolved = `${activeDevice}|${primaryId}|${secondaryId}`;
+	const unchanged = lastResolved.get(action.id) === resolved;
+	lastResolved.set(action.id, resolved);
+
 	if (kind === "set") {
 		action.setState(activeDevice === primaryId ? 0 : 1).catch((error) => streamDeck.logger.error("Failed to set state", error));
 		return;
@@ -80,6 +102,7 @@ export function updateState(action: KeyAction<ButtonSettings>, kind: ActionKind,
 		action.setState(1).catch((error) => streamDeck.logger.error("Failed to set state", error));
 		return;
 	}
+	if (fromPoll && unchanged) return;
 	action.showAlert().catch((error) => streamDeck.logger.error("Failed to show alert", error));
 }
 

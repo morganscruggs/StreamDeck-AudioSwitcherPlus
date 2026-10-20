@@ -35,7 +35,7 @@ Same underlying cause as [the exe build](../audio-switcher-exe/TROUBLESHOOTING.m
 
 ## Plugin's own log file isn't updating
 
-The SDK's file logger appears to persist only `warn`/`error`-level entries to `<sdPlugin>/logs/com.morgan-scruggs.audioswitcherplus-node.<N>.log`, regardless of `setLevel("trace")` in `src/plugin.ts` - `debug`/`trace` calls won't show up there even though they're enabled. If you need finer-grained tracing while debugging, add a temporary raw `fs.appendFileSync` call to a separate file rather than relying on `streamDeck.logger`.
+The SDK's file logger appears to persist only `warn`/`error`-level entries to `<sdPlugin>/logs/com.morgan-scruggs.audioswitcherplus-node.<N>.log`, regardless of log level - even with `streamDeck.logger.setLevel("trace")` added to `src/plugin.ts`, `debug`/`trace` calls won't show up there. If you need finer-grained tracing while debugging, add a temporary raw `fs.appendFileSync` call to a separate file rather than relying on `streamDeck.logger`.
 
 ## Antivirus or EDR software flags or blocks the plugin
 

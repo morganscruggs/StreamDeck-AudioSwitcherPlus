@@ -243,10 +243,11 @@ ${body}
 `;
 }
 
-async function runPowerShell(script: string): Promise<string> {
+async function runPowerShell(script: string, env?: Record<string, string>): Promise<string> {
 	const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-MTA", "-Command", script], {
 		timeout: 10000,
-		maxBuffer: 20 * 1024 * 1024
+		maxBuffer: 20 * 1024 * 1024,
+		env: env ? { ...process.env, ...env } : undefined
 	});
 	return stdout.trim();
 }
@@ -285,11 +286,14 @@ export async function getSnapshot(): Promise<AudioSnapshot> {
  * this twice (once with role "default", once with "communication").
  */
 export async function setDefaultDevice(role: AudioDeviceRole, deviceId: string): Promise<boolean> {
+	// The device ID comes from button settings (which can arrive via an imported profile), so it's
+	// passed through the environment rather than spliced into the script - interpolating it into a
+	// PowerShell string would let something like "$(...)" execute.
 	const script = buildScript(`
-		$ok = [AudioBridge]::SetDefault("${deviceId.replace(/`/g, "``").replace(/"/g, '`"')}", ${ROLE[role]})
+		$ok = [AudioBridge]::SetDefault($env:AUDIO_SWITCHER_DEVICE_ID, ${ROLE[role]})
 		Write-Output (@{ ok = $ok } | ConvertTo-Json -Compress)
 	`);
-	const stdout = await runPowerShell(script);
+	const stdout = await runPowerShell(script, { AUDIO_SWITCHER_DEVICE_ID: deviceId });
 	const parsed = JSON.parse(stdout);
 	if (parsed.error) throw new Error(`Audio bridge error: ${parsed.error}`);
 	return !!parsed.ok;

@@ -57,7 +57,9 @@ cmake ..
 cmake --build . --config RelWithDebInfo --target install --parallel
 ```
 
-This compiles `sdaudioswitchplus.exe` and installs it, along with the property inspector, icons, and manifest, into `../com.morganscruggs.audioswitcherplus.sdPlugin` at the repo root (the default `CMAKE_INSTALL_PREFIX`, set by `set_default_install_dir_to_repo_root()` in `StreamDeckSDK.cmake`). The install step then automatically mirrors that folder into `%APPDATA%\Elgato\StreamDeck\Plugins\com.morganscruggs.audioswitcherplus.sdPlugin` (`sync_install_to_streamdeck_plugin_dir()`, same file) - the same way [the Node build](../audio-switcher-node/)'s rollup config syncs its own output. The `build/` directory can be reused for later builds; swap `RelWithDebInfo` for `Debug` to build that configuration instead.
+This compiles `sdaudioswitchplus.exe` and installs it, along with the property inspector, icons, and manifest, into `../com.morganscruggs.audioswitcherplus.sdPlugin` at the repo root (the default `CMAKE_INSTALL_PREFIX`, set by `set_default_install_dir_to_repo_root()` in `StreamDeckSDK.cmake`). The install step then automatically mirrors that folder into `%APPDATA%\Elgato\StreamDeck\Plugins\com.morganscruggs.audioswitcherplus.sdPlugin` (`sync_install_to_streamdeck_plugin_dir()`, same file) - the same way [the Node build](../audio-switcher-node/)'s rollup config syncs its own output. Configure with `-DSYNC_TO_STREAMDECK=OFF` to skip that sync (CI does, and it's also handy for building while Stream Deck is running). The `build/` directory can be reused for later builds; swap `RelWithDebInfo` for `Debug` to build that configuration instead.
+
+The version number comes from [`shared/VERSION`](../shared/VERSION), shared with the Node build, with the CI run number (or `0` locally) appended as the fourth component.
 
 **Before rebuilding, fully quit Stream Deck** - its main process holds file handles inside the Plugins folder, and the install step's sync silently fails with a permission error otherwise (the build itself still succeeds). Relaunch it afterward to pick up the new build:
 

@@ -18,11 +18,15 @@ This repo contains two separate, independently-installable builds of the same pl
 
 Both install and run completely independently (different plugin UUIDs, different install folders), so you can have either or both active at once. If Smart App Control isn't a problem for you, the exe version is the more responsive choice; otherwise the Node version trades some responsiveness for not being blocked. See each folder's own README for setup, features, and its own troubleshooting guide.
 
-Shared, non-code assets (currently just the button icons) live in [`shared/`](shared/) and are pulled in by both projects' build steps rather than duplicated.
+Shared, non-code assets (the button icons, and the `VERSION` file both plugins take their version from) live in [`shared/`](shared/) and are pulled in by both projects' build steps rather than duplicated.
 
 ## Building
 
 Each build documents its own process - see the "Building"/"Building From Source" section of [the exe README](audio-switcher-exe/README.md#building-from-source) or [the node README](audio-switcher-node/README.md#building). Both build steps install straight into `%APPDATA%\Elgato\StreamDeck\Plugins\`, so **fully quit Stream Deck before building/installing**, then relaunch it afterward to pick up the change.
+
+## Releasing
+
+CI builds, tests and packages both plugins on every push. To release, bump [`shared/VERSION`](shared/VERSION), commit, and push a matching tag (`0.2.0` or `v0.2.0`; a `-suffix` such as `0.2.0-beta1` marks a prerelease). That drafts a GitHub release with both `.streamDeckPlugin` files and the exe's debug symbols attached; the release job fails if the tag doesn't match `shared/VERSION`.
 
 ## Notes
 

@@ -3,7 +3,12 @@ cmake_minimum_required(VERSION 3.15)
 # CMAKE_MSVC_RUNTIME_LIBRARY support
 cmake_policy(SET CMP0091 NEW)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "Minimum MacOS version")
+
+# The plugin version lives once in shared/VERSION, which the Node plugin's build also reads; the build
+# number is appended as the fourth component.
+set(PLUGIN_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../shared/VERSION")
+file(STRINGS "${PLUGIN_VERSION_FILE}" PLUGIN_VERSION LIMIT_COUNT 1)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PLUGIN_VERSION_FILE}")
 
 if(DEFINED ENV{GITHUB_RUN_NUMBER})
   set(DEFAULT_VERSION_BUILD $ENV{GITHUB_RUN_NUMBER})
@@ -16,7 +21,7 @@ set(VERSION_BUILD "${DEFAULT_VERSION_BUILD}" CACHE STRING "patch component of ve
 project(
   com.morganscruggs.audioswitcherplus.sdPlugin
   LANGUAGES CXX
-  VERSION 0.1.1.${VERSION_BUILD}
+  VERSION ${PLUGIN_VERSION}.${VERSION_BUILD}
 )
 
 set(CMAKE_CXX_STANDARD 20)

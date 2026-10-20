@@ -8,6 +8,7 @@ install(
   FILES
   ${STATIC_FILES}
   ${CMAKE_CURRENT_BINARY_DIR}/manifest.json
+  .sdignore
   DESTINATION
   ${CMAKE_INSTALL_PREFIX}
 )

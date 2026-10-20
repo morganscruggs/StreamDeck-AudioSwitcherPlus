@@ -1,0 +1,36 @@
+on:
+  workflow_call:
+jobs:
+  build:
+    name: Check, test and package
+    # Nothing here touches the PowerShell bridge, so this doesn't need a Windows runner.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: audio-switcher-node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: audio-switcher-node/package-lock.json
+      - run: npm ci
+      - name: Type-check
+        run: npm run typecheck
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          SYNC_TO_STREAMDECK: "0"
+      - name: Validate and package
+        run: >
+          npx streamdeck pack ../com.morgan-scruggs.audioswitcherplus-node.sdPlugin
+          --output "${{ runner.temp }}/package" --no-update-check
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-plugin
+          path: ${{ runner.temp }}/package/*.streamDeckPlugin
+          if-no-files-found: error

@@ -1,0 +1,41 @@
+on:
+  workflow_call:
+jobs:
+  build:
+    name: Build and package
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: audio-switcher-node/package-lock.json
+      - name: Install Stream Deck CLI
+        # The CLI is a dev dependency of the Node plugin, so installing that project pins it via its lockfile.
+        working-directory: audio-switcher-node
+        run: npm ci
+      - name: Configure
+        run: >
+          cmake -S audio-switcher-exe -B build
+          "-DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/com.morganscruggs.audioswitcherplus.sdPlugin"
+          -DSYNC_TO_STREAMDECK=OFF
+      - name: Build and install
+        run: cmake --build build --config RelWithDebInfo --target install --parallel
+      - name: Validate and package
+        working-directory: audio-switcher-node
+        run: >
+          npx streamdeck pack "${{ runner.temp }}/com.morganscruggs.audioswitcherplus.sdPlugin"
+          --output "${{ runner.temp }}/package" --no-update-check
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe-plugin
+          path: ${{ runner.temp }}/package/*.streamDeckPlugin
+          if-no-files-found: error
+      - name: Upload debug symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe-symbols
+          path: build/Sources/RelWithDebInfo/sdaudioswitchplus.pdb
+          if-no-files-found: error

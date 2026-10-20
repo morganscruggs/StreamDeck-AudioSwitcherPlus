@@ -1,0 +1,11 @@
+{
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		// Tests run directly under Node's type stripping, which needs the explicit ".ts" import extensions.
+		"allowImportingTsExtensions": true,
+		"noEmit": true
+	},
+	"include": [
+		"**/*.ts"
+	]
+}

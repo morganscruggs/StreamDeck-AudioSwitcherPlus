@@ -3,8 +3,6 @@ import streamDeck from "@elgato/streamdeck";
 import { SetDeviceAction } from "./actions/set-device";
 import { ToggleDeviceAction } from "./actions/toggle-device";
 
-streamDeck.logger.setLevel("trace");
-
 streamDeck.actions.registerAction(new SetDeviceAction());
 streamDeck.actions.registerAction(new ToggleDeviceAction());
 

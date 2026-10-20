@@ -23,7 +23,11 @@ npm install
 npm run build
 ```
 
-This compiles `src/plugin.ts` into `com.morgan-scruggs.audioswitcherplus-node.sdPlugin/bin/plugin.js` and, if `%APPDATA%\Elgato\StreamDeck\Plugins\` exists and isn't a symlink back to this folder, copies the whole built plugin folder there.
+This compiles `src/plugin.ts` into `com.morgan-scruggs.audioswitcherplus-node.sdPlugin/bin/plugin.js` and, if `%APPDATA%\Elgato\StreamDeck\Plugins\` exists and isn't a symlink back to this folder, copies the whole built plugin folder there. Set `SYNC_TO_STREAMDECK=0` to skip that copy (CI does).
+
+The build also stamps the manifest's `Version` from [`shared/VERSION`](../shared/VERSION), shared with the exe build, so bump the version there rather than in `manifest.json`.
+
+`npm run typecheck` type-checks the sources and tests; `npm test` runs the tests.
 
 **After any code change, restart Stream Deck fully** rather than relying on `npx streamdeck restart <uuid>` - that command has been observed to silently report success without actually restarting the plugin process (e.g. after a Windows reboot), leaving you testing a stale build:
 
@@ -33,6 +37,6 @@ Start-Sleep -Seconds 2
 Start-Process "C:\Program Files\Elgato\StreamDeck\StreamDeck.exe"
 ```
 
-## Status
+## Packaging
 
-Not yet packaged into a distributable `.streamDeckPlugin` file - both this and the native build currently only run installed directly in Stream Deck's Plugins folder (dev mode). `@elgato/cli` (already a dev dependency) supports `streamdeck pack` if/when that's needed.
+CI packages both this and the native build into `.streamDeckPlugin` files with `streamdeck pack` from `@elgato/cli` (a dev dependency here), and pushing a tag drafts a GitHub release with them - see the root README. To pack locally, run `npx streamdeck pack ../com.morgan-scruggs.audioswitcherplus-node.sdPlugin --output <dir>` after building. Note that `pack` rewrites `manifest.json` in place (dropping its final newline), so discard that change afterward.

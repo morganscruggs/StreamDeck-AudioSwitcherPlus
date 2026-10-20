@@ -14,29 +14,24 @@ LICENSE file.
 **/
 //==============================================================================
 
+#pragma once
+
 #include <AudioDevices/AudioDevices.h>
 #include <StreamDeckSDK/ESDBasePlugin.h>
 
+#include <map>
 #include <mutex>
-#include <set>
 
 #include "ButtonSettings.h"
 
 using json = nlohmann::json;
 using namespace FredEmmott::Audio;
 
-class CallBackTimer;
-
 class AudioSwitcherStreamDeckPlugin : public ESDBasePlugin {
  public:
   AudioSwitcherStreamDeckPlugin();
   virtual ~AudioSwitcherStreamDeckPlugin();
 
-  void KeyDownForAction(
-    const std::string& inAction,
-    const std::string& inContext,
-    const json& inPayload,
-    const std::string& inDeviceID) override;
   void KeyUpForAction(
     const std::string& inAction,
     const std::string& inContext,
@@ -76,11 +71,14 @@ class AudioSwitcherStreamDeckPlugin : public ESDBasePlugin {
     std::string action;
     std::string context;
     ButtonSettings settings;
+    // The settings exactly as Stream Deck sent them - ButtonSettings only models the keys the plugin
+    // itself uses, so writing it back alone would drop property-inspector-only keys
+    // (hideUnavailable, primaryLabel, ...).
+    json rawSettings;
   };
 
-  std::recursive_mutex mVisibleContextsMutex;
-  std::set<std::string> mVisibleContexts;
-
+  // Recursive since OnDefaultDeviceChanged/WillAppearForAction call UpdateState while holding it.
+  std::recursive_mutex mButtonsMutex;
   std::map<std::string, Button> mButtons;
   DefaultChangeCallbackHandle mCallbackHandle;
   // Cached once at startup - StreamDeckSDK's GetPluginDirectoryPath() only

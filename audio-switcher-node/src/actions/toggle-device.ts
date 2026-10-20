@@ -10,7 +10,7 @@ import streamDeck, {
 import { applyIcons } from "../apply-icon";
 import { audioDeviceService } from "../audio-device-service";
 import { handlePropertyInspectorMessage } from "../pi-bridge";
-import { backfillDeviceInfo, performKeyPress, updateState } from "../state-sync";
+import { backfillDeviceInfo, forgetState, performKeyPress, updateState } from "../state-sync";
 import type { ButtonSettings } from "../types";
 
 /**
@@ -20,16 +20,20 @@ import type { ButtonSettings } from "../types";
 @action({ UUID: "com.morgan-scruggs.audioswitcherplus-node.toggle" })
 export class ToggleDeviceAction extends SingletonAction<ButtonSettings> {
 	private unsubscribe = new Map<string, () => void>();
+	// Latest settings per visible action - the poll listener reads from here so it picks up changes made
+	// in the property inspector, rather than the settings captured when the action first appeared.
+	private settings = new Map<string, ButtonSettings>();
 
 	override async onWillAppear(ev: WillAppearEvent<ButtonSettings>): Promise<void> {
 		if (!ev.action.isKey()) return;
 		const action = ev.action;
 		const settings = ev.payload.settings;
+		this.settings.set(action.id, settings);
 
 		audioDeviceService.acquire();
 		this.unsubscribe.set(
 			action.id,
-			audioDeviceService.subscribe((snapshot) => updateState(action, "toggle", settings, snapshot))
+			audioDeviceService.subscribe((snapshot) => updateState(action, "toggle", this.settings.get(action.id) ?? settings, snapshot, true))
 		);
 
 		applyIcons(action, "toggle", settings);
@@ -38,13 +42,18 @@ export class ToggleDeviceAction extends SingletonAction<ButtonSettings> {
 	}
 
 	override onWillDisappear(ev: WillDisappearEvent<ButtonSettings>): void {
+		const unsubscribe = this.unsubscribe.get(ev.action.id);
+		if (!unsubscribe) return;
+		unsubscribe();
 		audioDeviceService.release();
-		this.unsubscribe.get(ev.action.id)?.();
 		this.unsubscribe.delete(ev.action.id);
+		this.settings.delete(ev.action.id);
+		forgetState(ev.action.id);
 	}
 
 	override onDidReceiveSettings(ev: DidReceiveSettingsEvent<ButtonSettings>): void {
 		if (!ev.action.isKey()) return;
+		this.settings.set(ev.action.id, ev.payload.settings);
 		applyIcons(ev.action, "toggle", ev.payload.settings);
 		updateState(ev.action, "toggle", ev.payload.settings, audioDeviceService.getSnapshot());
 	}

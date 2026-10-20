@@ -3,33 +3,36 @@ on:
   workflow_call:
 jobs:
   release:
-    name: Release
+    name: Draft release
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v4
-      with:
-        path: ${{runner.temp}}/artifacts
-    - name: Display downloaded files
-      run: ls -R
-      working-directory: ${{runner.temp}}/artifacts
-    - name: Check if this is a release push
-      id: ref
-      run: |
-        if echo ${{github.ref}} | grep --silent refs/tags/v; then
-          echo "is-release=true" >> $GITHUB_OUTPUT
-          echo "tag=$(echo ${{github.ref}} | awk -F/ '{print $NF}')" >> $GITHUB_OUTPUT
-        else
-          echo "is-release=false" >> $GITHUB_OUTPUT
-        fi
-    - name: Create Draft Release
-      id: create-release
-      if: steps.ref.outputs.is-release == 'true'
-      uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
-      with:
-        tag_name: ${{steps.ref.outputs.tag}}
-        prerelease: ${{contains(github.ref_name, '-')}}
-        draft: true
-        files: |
-          ${{runner.temp}}/artifacts/package-sdplugin/*.streamDeckPlugin
-          ${{runner.temp}}/artifacts/build-windows-x86_64-RelWithDebInfo/*.pdb
-          ${{runner.temp}}/artifacts/package-macos-DebugSymbols/*.dSYM.zip
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: shared/VERSION
+          sparse-checkout-cone-mode: false
+      - name: Check the tag matches shared/VERSION
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(tr -d '[:space:]' < shared/VERSION)"
+          # A prerelease tag like "0.2.0-beta1" matches on the part before the "-".
+          if [ "${tag%%-*}" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match shared/VERSION ($version)"
+            exit 1
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/artifacts
+      - name: Display downloaded files
+        run: ls -R
+        working-directory: ${{ runner.temp }}/artifacts
+      - name: Create draft release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        with:
+          tag_name: ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          draft: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ runner.temp }}/artifacts/exe-plugin/*.streamDeckPlugin
+            ${{ runner.temp }}/artifacts/node-plugin/*.streamDeckPlugin
+            ${{ runner.temp }}/artifacts/exe-symbols/*.pdb

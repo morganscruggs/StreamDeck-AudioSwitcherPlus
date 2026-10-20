@@ -32,7 +32,7 @@
     }
   ],
   "Author": "Morgan Scruggs",
-  "CodePathWin": "sdaudioswitchplus.exe",
+  "CodePath": "sdaudioswitchplus.exe",
   "Description": "Toggle or set the active audio devices. Fork of Fred Emmott's Audio Switcher (github.com/fredemmott).",
   "Name": "Audio Switcher Plus",
   "PropertyInspectorPath": "propertyinspector/index.html",
@@ -48,6 +48,7 @@
   ],
   "SDKVersion": 2,
   "Software": {
-    "MinimumVersion": "4.1"
-  }
+    "MinimumVersion": "6.4"
+  },
+  "UUID": "com.morganscruggs.audioswitcherplus"
 }
