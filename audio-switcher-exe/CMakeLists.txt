@@ -1,7 +1,12 @@
-cmake_minimum_required(VERSION 3.15)
+# 3.28 for FetchContent_Declare(EXCLUDE_FROM_ALL); policies up to 3.31 (the CMake bundled with Visual
+# Studio 2022) use their new behavior.
+cmake_minimum_required(VERSION 3.28...3.31)
 
-# CMAKE_MSVC_RUNTIME_LIBRARY support
-cmake_policy(SET CMP0091 NEW)
+# The fetched dependencies declare older minimum versions of their own, so this policy (newer than
+# those) would otherwise be unset for them and warn on every configure. NEW: files extracted from their
+# vendored downloads get the extraction time as their timestamp.
+set(CMAKE_POLICY_DEFAULT_CMP0135 NEW)
+
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 # The plugin version lives once in shared/VERSION, which the Node plugin's build also reads; the build

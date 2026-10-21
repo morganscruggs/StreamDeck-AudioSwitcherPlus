@@ -26,13 +26,15 @@ Decisions to make
 Build / maintenance
 -------------------
 
-[ ] Exe CMake deprecation warnings - AudioDeviceLib.cmake and StreamDeckSDK.cmake call
-    FetchContent_Populate(), which CMake deprecates (CMP0169) and a future release will remove.
-    Switch to FetchContent_MakeAvailable(). Configure also prints CMP0177 (install DESTINATION
-    normalization) notices from the install() rules. Builds work today. (Exe only.)
+[x] Exe CMake deprecation warnings - switched to FetchContent_MakeAvailable() (keeping the
+    dependencies' own install rules out via EXCLUDE_FROM_ALL), now requires CMake 3.28+ with policies
+    up to 3.31, and CMP0135 defaulted for the dependencies. Configure is warning-free on CMake 3.31
+    and 4.4. (Exe only.)
 
-[ ] Confirm the first GitHub Actions run passes - the new CI (build-exe.yml, build-node.yml,
-    release.yml) has only been simulated locally. Check the Actions tab after the next push.
+[x] Confirm the first GitHub Actions run passes - the new CI passed on GitHub for 8ee604a,
+    c6b5a4f and 2f4003b.
+
+[x] Cancel the two stuck runs (ad71d21, 933eb88) from the old CI - cancelled.
 
 [ ] Test a release - bump shared/VERSION, commit, push a matching tag (e.g. 0.1.2 or v0.1.2) and
     check a draft release appears with both .streamDeckPlugin files and the .pdb attached.

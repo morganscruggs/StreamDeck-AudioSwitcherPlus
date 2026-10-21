@@ -47,7 +47,7 @@ Download the `com.morganscruggs.audioswitcherplus.streamDeckPlugin` file from [t
 
 # Building From Source
 
-Requires Visual Studio 2022 (with the "Desktop development with C++" workload) and CMake 3.15+. Windows only - see [the repo root README](../README.md).
+Requires Visual Studio 2022 (with the "Desktop development with C++" workload) and CMake 3.28+ (the one bundled with current Visual Studio 2022 is fine). Windows only - see [the repo root README](../README.md).
 
 ```powershell
 cd audio-switcher-exe

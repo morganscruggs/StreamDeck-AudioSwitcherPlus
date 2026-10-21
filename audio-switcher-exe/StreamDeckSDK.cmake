@@ -5,13 +5,12 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/fredemmott/StreamDeck-CPPSDK
   GIT_TAG 2652cbddee10bea56f19484ddd074c26e9f179de
   DOWNLOAD_EXTRACT_TIMESTAMP ON
+  # Keeps its targets out of the default build and its own install() rules out of this plugin's
+  # install - notably its example plugin's, which would install a manifest.json over this one's.
+  EXCLUDE_FROM_ALL
 )
 
-FetchContent_GetProperties(StreamDeckSDK)
-if(NOT streamdecksdk_POPULATED)
-  FetchContent_Populate(StreamDeckSDK)
-  add_subdirectory("${streamdecksdk_SOURCE_DIR}" "${streamdecksdk_BINARY_DIR}" EXCLUDE_FROM_ALL)
-endif()
+FetchContent_MakeAvailable(StreamDeckSDK)
 
 string(
   REPLACE
