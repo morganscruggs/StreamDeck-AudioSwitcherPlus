@@ -8,41 +8,10 @@ Remaining improvements, roughly in priority order. Tick items off ([x]) or delet
 Decisions to make
 -----------------
 
-[x] FUNDING.yml - now points at morganscruggs instead of fredemmott.
-
 [ ] GitHub Sponsors - the Sponsor button only works once the morganscruggs account is enrolled and
     approved in GitHub Sponsors (github.com/sponsors), and "Sponsorships" is ticked under the repo's
     Settings -> General -> Features. Until then, either finish that sign-up or switch FUNDING.yml to
     another platform (e.g. ko_fi: or buy_me_a_coffee:).
-
-[x] README "Getting Help" section - rewritten: contact via GitHub issues, may be slow, mainly for
-    personal use (no longer contradicts the issue templates).
-
-[x] Plugin category name - renamed to match the plugin names, clearing Elgato's validator warning.
-    Now "Audio Switcher Plus" for the node build (the one published to the Marketplace) and
-    "Audio Switcher Plus (exe)" for the exe build. (Needs a rebuild/redeploy to show up in
-    Stream Deck's action list.)
-
-
-Build / maintenance
--------------------
-
-[x] Exe CMake deprecation warnings - switched to FetchContent_MakeAvailable() (keeping the
-    dependencies' own install rules out via EXCLUDE_FROM_ALL), now requires CMake 3.28+ with policies
-    up to 3.31, and CMP0135 defaulted for the dependencies. Configure is warning-free on CMake 3.31
-    and 4.4. (Exe only.)
-
-[x] Confirm the first GitHub Actions run passes - the new CI passed on GitHub for 8ee604a,
-    c6b5a4f and 2f4003b.
-
-[x] Cancel the two stuck runs (ad71d21, 933eb88) from the old CI - cancelled.
-
-[ ] Test a release - bump shared/VERSION, commit, push a matching tag (e.g. 0.1.2 or v0.1.2) and
-    check a draft release appears with both .streamDeckPlugin files and the .pdb attached.
-
-[ ] npm audit - 3 dev-only advisories (brace-expansion, fast-uri via @elgato/cli; serialize-javascript
-    via @rollup/plugin-terser). None ship in the plugin bundle. Dependabot should raise PRs; merge
-    them when they arrive. (Node only.)
 
 
 Optional
@@ -53,3 +22,12 @@ Optional
     Signing is relatively cheap; sign_target.cmake already supports passing signtool arguments via
     SIGNTOOL_KEY_ARGS, and CI would need a signing step with the credentials as repo secrets.
     Mainly worth it if the exe version is going to be shared with other people. (Exe only.)
+
+[ ] Custom icon from a file in the plugin's own icon picker - a "Custom..." tile next to the built-in
+    icons. The property inspector could resize the chosen image (e.g. to 144x144) and save it in the
+    key's settings as a PNG data URI, so it keeps working if the original file moves. Decide first how
+    a custom image shows "inactive": recoloring turns a full-color image into a flat silhouette, and
+    Set's default grey Off color would turn a photo into a grey square, so dimming it may suit better.
+    Note Stream Deck's own "Set from File" on the key already works today (a user-chosen image takes
+    priority over the plugin's setImage), so this is mainly about recoloring and discoverability.
+    (Both versions.)

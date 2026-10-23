@@ -82,13 +82,16 @@
 </svg>
 
 <template id="appicon">
-  <!-- Headphones and speaker from shared/AudioDevicesIcons, with a swap arrow between them. -->
+  <!-- Headphones, speaker and earbuds from shared/AudioDevicesIcons around a ring, with an arrow in each gap
+       cycling clockwise from one device to the next. -->
   <div class="appicon">
-    <i class="glyph" style="--icon:url(../../shared/AudioDevicesIcons/headphones.png); left:-4%; top:-4%; width:66%; height:66%;"></i>
-    <i class="glyph" style="--icon:url(../../shared/AudioDevicesIcons/speaker.png); left:38%; top:38%; width:66%; height:66%;"></i>
-    <svg viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M62 17 C 78 17, 84 25, 84 38"/><path d="M77 32 L84 39 L91 32"/>
-      <path d="M38 83 C 22 83, 16 75, 16 62"/><path d="M9 68 L16 61 L23 68"/>
+    <i class="glyph" style="--icon:url(../../shared/AudioDevicesIcons/headphones.png); left:24%; top:-7%; width:52%; height:52%;"></i>
+    <i class="glyph" style="--icon:url(../../shared/AudioDevicesIcons/speaker.png); left:47.4%; top:33.5%; width:52%; height:52%;"></i>
+    <i class="glyph" style="--icon:url(../../shared/AudioDevicesIcons/Earbuds.png); left:0.6%; top:33.5%; width:52%; height:52%;"></i>
+    <svg viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M77.3 16.7 A40 40 0 0 1 89.0 37.0"/><path d="M93.2 28.8 L89.0 37.0 L81.6 31.5"/>
+      <path d="M61.7 84.3 A40 40 0 0 1 38.3 84.3"/><path d="M43.2 92.0 L38.3 84.3 L46.8 80.6"/>
+      <path d="M11.0 37.0 A40 40 0 0 1 22.7 16.7"/><path d="M13.5 17.1 L22.7 16.7 L21.7 25.9"/>
     </svg>
   </div>
 </template>
