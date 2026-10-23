@@ -33,7 +33,7 @@
   ],
   "Author": "Morgan Scruggs",
   "CodePath": "sdaudioswitchplus.exe",
-  "Description": "Toggle or set the active audio devices (native exe build). Fork of Fred Emmott's Audio Switcher (github.com/fredemmott).",
+  "Description": "Toggle or set the active audio devices (native exe build). Based on Fred Emmott's Audio Switcher (github.com/fredemmott).",
   "Name": "Audio Switcher Plus (exe)",
   "PropertyInspectorPath": "propertyinspector/index.html",
   "Icon": "AudioDevicesIcons/headphones",

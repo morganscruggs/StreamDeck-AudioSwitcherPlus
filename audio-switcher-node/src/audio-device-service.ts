@@ -101,9 +101,17 @@ class AudioDeviceService {
 		}
 	}
 
-	/** Sets the default device for a role, then immediately refreshes so buttons reflect it right away. */
-	async setDefaultDevice(role: AudioDeviceRole, deviceId: string): Promise<boolean> {
-		const ok = await this.bridge.setDefaultDevice(role, deviceId);
+	/**
+	 * Sets the default device for each role, then refreshes once so buttons reflect it right away. Refreshing
+	 * only after the last role means no button sees a half-switched snapshot (e.g. the new default device but
+	 * the old communications one), which would flip "All" buttons back and forth mid-switch.
+	 */
+	async setDefaultDevice(roles: AudioDeviceRole[], deviceId: string): Promise<boolean> {
+		let ok = true;
+		for (const role of roles) ok = (await this.bridge.setDefaultDevice(role, deviceId)) && ok;
+		// A refresh already in flight may have read the state from before the switch, so wait it out and
+		// read again rather than sharing its result.
+		while (this.refreshInFlight) await this.refreshInFlight.catch(() => undefined);
 		await this.refresh().catch((error) => streamDeck.logger.error("Post-set audio device refresh failed", error));
 		return ok;
 	}

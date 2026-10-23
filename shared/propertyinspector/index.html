@@ -41,6 +41,9 @@
     .row > .ctl { flex: 1 1 auto; min-width: 0; display: flex; gap: 6px; align-items: center; }
     .stack { display: block; margin-bottom: 5px; }
     .stack > label { display: block; color: var(--muted); font-size: 8.5pt; margin-bottom: 2px; }
+    /* A picker's heading with its own color swatch and Reset beside it (Toggle's primary/secondary). */
+    .stack-head { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+    .stack-head > label { color: var(--muted); font-size: 8.5pt; }
 
     select {
       background: var(--field); color: var(--fg); border: 1px solid #4a4a4a;
@@ -243,22 +246,20 @@
         </div>
 
         <div class="stack" id="primaryIconDiv">
-          <label>Primary</label>
+          <div class="stack-head">
+            <label>Primary</label>
+            <input type="color" id="primaryIconColor" onchange="updateIconColor('primaryIconColor');" />
+            <button class="link" onclick="resetIconColor('primaryIconColor');">Reset</button>
+          </div>
           <div class="grid" id="primaryIconPicker"></div>
         </div>
         <div class="stack" id="secondaryIconDiv">
-          <label>Secondary</label>
-          <div class="grid" id="secondaryIconPicker"></div>
-        </div>
-        <div class="row" id="toggleIconColorDiv">
-          <label>Colors</label>
-          <div class="ctl">
-            <span>Primary</span>
-            <input type="color" id="primaryIconColor" onchange="updateIconColor('primaryIconColor');" />
-            <span>Secondary</span>
+          <div class="stack-head">
+            <label>Secondary</label>
             <input type="color" id="secondaryIconColor" onchange="updateIconColor('secondaryIconColor');" />
-            <button class="link" onclick="resetIconColors();">Reset</button>
+            <button class="link" onclick="resetIconColor('secondaryIconColor');">Reset</button>
           </div>
+          <div class="grid" id="secondaryIconPicker"></div>
         </div>
         <div class="hint full">Leave a color untouched to keep the icon's own.</div>
       </div>
@@ -271,7 +272,7 @@
 
     <footer>
       <span id="version"></span>
-      <em><span id="pluginName">Audio Switcher Plus</span> · a fork of Fred Emmott's Audio Switcher, extended by Morgan Scruggs</em>
+      <em><span id="pluginName">Audio Switcher Plus</span> by Morgan Scruggs · based on Fred Emmott's Audio Switcher</em>
     </footer>
   </div>
 
@@ -519,6 +520,12 @@
       saveSettings();
     }
 
+    function resetIconColor(settingsKey) {
+      settings[settingsKey] = '';
+      applyIconColorInputs();
+      saveSettings();
+    }
+
     function receivedDataFromPlugin(message) {
       const payload = message.payload || {};
 
@@ -588,7 +595,6 @@
       document.getElementById('iconColorDiv').classList.toggle('hidden', !isSetAction);
       document.getElementById('primaryIconDiv').classList.toggle('hidden', isSetAction);
       document.getElementById('secondaryIconDiv').classList.toggle('hidden', isSetAction);
-      document.getElementById('toggleIconColorDiv').classList.toggle('hidden', isSetAction);
     }
 
     window.connectElgatoStreamDeckSocket = function (port, inUUID, registerEvent, inInfo, inActionInfo) {

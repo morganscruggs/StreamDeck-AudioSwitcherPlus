@@ -41,12 +41,12 @@
 	],
 	"Author": "Morgan Scruggs",
 	"CodePath": "bin/plugin.js",
-	"Description": "Toggle or set the active audio devices. Fork of Fred Emmott's Audio Switcher (github.com/fredemmott).",
+	"Description": "Toggle or set the active audio devices. Based on Fred Emmott's Audio Switcher (github.com/fredemmott).",
 	"Name": "Audio Switcher Plus",
 	"Icon": "AudioDevicesIcons/headphones",
 	"Category": "Audio Switcher Plus",
 	"CategoryIcon": "AudioDevicesIcons/speaker",
-	"Version": "0.1.1.0",
+	"Version": "1.0.0.0",
 	"OS": [
 		{
 			"Platform": "windows",

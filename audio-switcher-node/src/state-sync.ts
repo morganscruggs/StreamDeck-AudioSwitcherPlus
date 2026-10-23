@@ -56,6 +56,21 @@ const lastResolved = new Map<string, string>();
 /** Drops the per-action state kept by {@link updateState}; call when the action disappears. */
 export function forgetState(actionId: string): void {
 	lastResolved.delete(actionId);
+	heldUpdates.delete(actionId);
+}
+
+// While a key press's switch is under way, every button's state updates are held, and once it has finished
+// only the latest one per button is applied - so a change notification landing mid-switch can't show a
+// button an in-between state.
+let switchesInProgress = 0;
+const heldUpdates = new Map<string, () => void>();
+
+function endSwitch(): void {
+	switchesInProgress = Math.max(0, switchesInProgress - 1);
+	if (switchesInProgress !== 0) return;
+	const updates = Array.from(heldUpdates.values());
+	heldUpdates.clear();
+	for (const update of updates) update();
 }
 
 /**
@@ -69,6 +84,11 @@ export function updateState(
 	snapshot: AudioSnapshot | undefined,
 	fromPoll = false
 ): void {
+	if (switchesInProgress > 0) {
+		heldUpdates.set(action.id, () => updateState(action, kind, settings, snapshot, fromPoll));
+		return;
+	}
+
 	const dirSnap = directionSnapshot(snapshot, settings.direction);
 	const primaryId = resolvePrimaryId(settings, snapshot);
 	const secondaryId = resolveSecondaryId(settings, snapshot);
@@ -107,13 +127,29 @@ export function updateState(
 }
 
 /**
- * Handles a key press for either action - ported from the shared tail of KeyUpForAction() in
- * AudioSwitcherStreamDeckPlugin.cpp. `state` is the action's state *before* this press (as reported by
- * Stream Deck) - for Toggle, state 0 means "currently showing primary, so target the secondary device"
- * and vice versa; this looks inverted but matches the original comment/behavior exactly. For Set,
- * always targets the primary (its "secondary" concept doesn't apply).
+ * Handles a key press for either action, holding every button's state updates until the switch has
+ * finished (see {@link heldUpdates}). Stream Deck flips a two-state key's image itself on press, so the
+ * pressed key is always re-resolved afterwards, even if the press changed nothing (e.g. an unplugged
+ * device), rather than being left on the image Stream Deck flipped it to.
  */
 export async function performKeyPress(action: KeyAction<ButtonSettings>, kind: ActionKind, settings: ButtonSettings, state: number | undefined): Promise<void> {
+	switchesInProgress++;
+	heldUpdates.set(action.id, () => updateState(action, kind, settings, audioDeviceService.getSnapshot()));
+	try {
+		await switchDevice(action, kind, settings, state);
+	} finally {
+		endSwitch();
+	}
+}
+
+/**
+ * Ported from the shared tail of KeyUpForAction() in AudioSwitcherStreamDeckPlugin.cpp. `state` is the
+ * action's state *before* this press (as reported by Stream Deck) - for Toggle, state 0 means "currently
+ * showing primary, so target the secondary device" and vice versa; this looks inverted but matches the
+ * original comment/behavior exactly. For Set, always targets the primary (its "secondary" concept doesn't
+ * apply).
+ */
+async function switchDevice(action: KeyAction<ButtonSettings>, kind: ActionKind, settings: ButtonSettings, state: number | undefined): Promise<void> {
 	const snapshot = audioDeviceService.getSnapshot();
 	const dirSnap = directionSnapshot(snapshot, settings.direction);
 
@@ -141,10 +177,5 @@ export async function performKeyPress(action: KeyAction<ButtonSettings>, kind: A
 		}
 	}
 
-	if (settings.role === "all") {
-		await audioDeviceService.setDefaultDevice("default", deviceId);
-		await audioDeviceService.setDefaultDevice("communication", deviceId);
-		return;
-	}
-	await audioDeviceService.setDefaultDevice(settings.role, deviceId);
+	await audioDeviceService.setDefaultDevice(settings.role === "all" ? ["default", "communication"] : [settings.role], deviceId);
 }
