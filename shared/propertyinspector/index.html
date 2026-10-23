@@ -599,8 +599,8 @@
       isSetAction = actionInfo.endsWith(".set");
       settings = (action.payload && action.payload.settings) ? action.payload.settings : {};
       document.getElementById('version').textContent = info.plugin && info.plugin.version ? `v${info.plugin.version}` : '';
-      if (info.plugin && info.plugin.uuid && info.plugin.uuid.endsWith("-node")) {
-        document.getElementById('pluginName').textContent = 'Audio Switcher Plus (Node)';
+      if (info.plugin && info.plugin.uuid && !info.plugin.uuid.endsWith("-node")) {
+        document.getElementById('pluginName').textContent = 'Audio Switcher Plus (exe)';
       }
       setupForAction();
 

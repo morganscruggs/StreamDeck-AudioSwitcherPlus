@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Audio Switcher Gallery</title>
+<!-- Source for the Marketplace gallery PNGs (1920x960) and the app icon (288x288). Render with render.ps1;
+     each slide is selected by URL hash (#1..#5, #icon). Key images are the plugin's own icons from
+     shared/AudioDevicesIcons, recolored with a CSS mask the same way png-recolor.ts does (keep alpha, replace
+     RGB). The settings panels are the real shared/propertyinspector/index.html, fed fake device data, so they
+     stay true to the plugin when the PI changes. Device names are generic Windows ones, not real products. -->
+<style>
+  :root {
+    --bg1: #1b1e25; --bg2: #0e1014;
+    --ink: #f4f5f7; --muted: #9aa0ab; --accent: #7c5cff; --dim: #606060;
+    --panel: #24262c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 960px; overflow: hidden; background: var(--bg2); }
+  body { font-family: "Segoe UI", system-ui, sans-serif; color: var(--ink); }
+  .slide { display: none; position: absolute; inset: 0; padding: 80px 110px;
+    background: radial-gradient(1200px 700px at 75% 40%, #2a2550 0%, transparent 60%), linear-gradient(135deg, var(--bg1), var(--bg2)); }
+  .slide.on { display: flex; }
+  h1 { font-size: 76px; font-weight: 700; letter-spacing: -1.5px; line-height: 1.05; }
+  h2 { font-size: 60px; font-weight: 700; letter-spacing: -1px; line-height: 1.1; }
+  p.lead { font-size: 32px; color: var(--muted); line-height: 1.35; margin-top: 24px; }
+  .col { display: flex; flex-direction: column; justify-content: center; }
+  .tag { display: inline-block; font-size: 22px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #b9a8ff; margin-bottom: 18px; }
+  .cap { font-size: 26px; color: var(--muted); text-align: center; margin-top: 18px; }
+
+  /* ---- Device: a stylised Stream Deck keypad. Keys show the 288px icon edge to edge, as Stream Deck does. ---- */
+  .deck { --k: 170px; display: inline-grid; grid-template-columns: repeat(var(--cols, 3), var(--k)); gap: calc(var(--k) * .26);
+    padding: calc(var(--k) * .3); border-radius: calc(var(--k) * .26); background: linear-gradient(#2b2d33, #1a1b1f);
+    box-shadow: 0 40px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08); }
+  .key { position: relative; width: var(--k); height: var(--k); border-radius: 16%; background: #000;
+    box-shadow: 0 0 0 3px #111, 0 6px 14px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.07); }
+  .key.hl { box-shadow: 0 0 0 3px #111, 0 0 0 9px var(--accent), 0 6px 14px rgba(0,0,0,.6); }
+  .key i, .glyph { display: block; position: absolute; inset: 0; background: #fff;
+    -webkit-mask: var(--icon) center / 100% 100% no-repeat; mask: var(--icon) center / 100% 100% no-repeat; }
+  .key svg.alert { position: absolute; left: 22%; top: 20%; width: 56%; height: 56%; }
+
+  /* ---- Windows-style sound output card ---- */
+  .sound { background: var(--panel); border: 1px solid #333; border-radius: 16px; box-shadow: 0 40px 80px rgba(0,0,0,.5); padding: 0 26px 14px; }
+  .sound-h { height: 86px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 600; border-bottom: 1px solid #333; margin-bottom: 12px; }
+  .sound-r { position: relative; height: 96px; display: flex; align-items: center; gap: 22px; padding: 0 20px; border-radius: 10px; }
+  .sound-r .ic { position: relative; width: 56px; height: 56px; flex: none; }
+  .sound-r .ic .glyph { background: #c8cbd2; }
+  .sound-r b { display: block; font-size: 26px; font-weight: 600; }
+  .sound-r em { display: block; font-style: normal; font-size: 21px; color: var(--muted); }
+  .sound-r.on { background: #2f2c45; }
+  .sound-r.on::before { content: ""; position: absolute; left: 0; top: 26px; bottom: 26px; width: 6px; border-radius: 3px; background: var(--accent); }
+  .sound-r.on .ic .glyph { background: #fff; }
+  .sound-r .chk { margin-left: auto; font-size: 30px; color: #b9a8ff; }
+
+  /* ---- The real property inspector, scaled up inside a panel card ---- */
+  .pi { border-radius: 16px; overflow: hidden; background: #2d2d2d; border: 1px solid #3a3a3a; box-shadow: 0 40px 80px rgba(0,0,0,.5); flex: none; }
+  .pi iframe { display: block; border: 0; transform-origin: 0 0; }
+
+  .callouts { display: flex; flex-direction: column; gap: 34px; }
+  .callout { display: flex; gap: 22px; align-items: flex-start; }
+  .callout .n { width: 52px; height: 52px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-size: 26px; font-weight: 700; flex: none; }
+  .callout h3 { font-size: 34px; font-weight: 600; }
+  .callout p { font-size: 25px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+
+  .press { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 26px; color: var(--muted); }
+  .press svg { width: 130px; height: 52px; }
+
+  /* ---- App icon (288x288 Marketplace icon) ---- */
+  .appicon { position: relative; flex: none; overflow: hidden; background: linear-gradient(135deg, #7c5cff 0%, #2f7dff 100%); }
+  .appicon .glyph { inset: auto; }
+  .appicon svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #sicon { padding: 0; background: none; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- Stand-in for Stream Deck's own showAlert() warning triangle. -->
+    <symbol id="alert" viewBox="0 0 100 100"><path d="M50 8 L95 88 H5 Z" fill="#f5c400" stroke="#f5c400" stroke-width="8" stroke-linejoin="round"/><rect x="45" y="36" width="10" height="30" rx="4" fill="#000"/><circle cx="50" cy="76" r="5.5" fill="#000"/></symbol>
+    <symbol id="arrow" viewBox="0 0 150 60"><path d="M10 30 H128" stroke="#7c5cff" stroke-width="6" stroke-linecap="round"/><path d="M118 16 L138 30 L118 44" fill="none" stroke="#7c5cff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<template id="appicon">
+  <!-- Headphones and speaker from shared/AudioDevicesIcons, with a swap arrow between them. -->
+  <div class="appicon">
+    <i class="glyph" style="--icon:url(../../shared/AudioDevicesIcons/headphones.png); left:-4%; top:-4%; width:66%; height:66%;"></i>
+    <i class="glyph" style="--icon:url(../../shared/AudioDevicesIcons/speaker.png); left:38%; top:38%; width:66%; height:66%;"></i>
+    <svg viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M62 17 C 78 17, 84 25, 84 38"/><path d="M77 32 L84 39 L91 32"/>
+      <path d="M38 83 C 22 83, 16 75, 16 62"/><path d="M9 68 L16 61 L23 68"/>
+    </svg>
+  </div>
+</template>
+
+<!-- 1. Hero / thumbnail: the active keys and the devices they make active, in Windows-style sound input/output cards. -->
+<section class="slide" id="s1" style="flex-direction:column; justify-content:center; gap:56px;">
+  <div style="display:flex; align-items:center; gap:36px;">
+    <div data-appicon style="width:120px; height:120px; border-radius:24px;"></div>
+    <div>
+      <h1 style="font-size:68px;">Audio Switcher Plus</h1>
+      <p class="lead" style="margin-top:10px; font-size:30px;">Switch your Windows output and input devices with one key press. Every key shows which one is active.</p>
+    </div>
+  </div>
+  <!-- Input card, deck and output card, centred and level (all three are 400px tall). The deck's top row is the
+       input devices, the bottom row the outputs; each connector leaves its key's outer edge straight to its card. -->
+  <div style="position:relative; width:1700px; height:540px;">
+    <div class="sound" style="position:absolute; left:0; top:70px; width:480px;" data-title="Sound input" data-sound='[["mic","Microphone","USB Microphone",1],["headphones","Headphones","Gaming Headset"],["Earbuds","Earbuds","Bluetooth Audio"]]'></div>
+    <div class="deck" style="--cols:3; --k:140px; position:absolute; left:562px; top:70px;" data-keys='[["mic","#ffaaff","hl"],["headphones","#606060"],["Earbuds","#606060"],["speaker","#606060"],["headphones","#606060"],["Earbuds","#55ff7f","hl"]]'></div>
+    <svg style="position:absolute; inset:0; overflow:visible;" width="1700" height="540">
+      <g fill="none" stroke="#7c5cff" stroke-width="5" stroke-linecap="round">
+        <path d="M595 216 H480"/>
+        <path d="M1106 408 H1220"/>
+      </g>
+      <circle cx="595" cy="216" r="9" fill="#7c5cff"/>
+      <circle cx="1106" cy="408" r="9" fill="#7c5cff"/>
+    </svg>
+    <div class="sound" style="position:absolute; left:1220px; top:70px; width:480px;" data-sound='[["speaker","Speakers","High Definition Audio Device"],["headphones","Headphones","Gaming Headset"],["Earbuds","Earbuds","Bluetooth Audio",1]]'></div>
+  </div>
+</section>
+
+<!-- 2. Toggle action -->
+<section class="slide" id="s2" style="flex-direction:column; align-items:center; justify-content:center;">
+  <span class="tag">Toggle Audio Device</span>
+  <h2 style="text-align:center;">One key, two devices</h2>
+  <p class="lead" style="text-align:center; margin-top:14px;">Press to flip between headphones and speakers. The key shows which one is playing.</p>
+  <div style="display:flex; gap:44px; align-items:center; margin-top:64px;">
+    <div class="sound" style="width:360px;" data-sound='[["headphones","Headphones","",1],["speaker","Speakers",""]]'></div>
+    <div class="deck" style="--cols:1; --k:170px;" data-keys='[["headphones"]]'></div>
+    <div class="press"><svg><use href="#arrow"/></svg>Press<svg style="transform:scaleX(-1)"><use href="#arrow"/></svg></div>
+    <div class="deck" style="--cols:1; --k:170px;" data-keys='[["speaker"]]'></div>
+    <div class="sound" style="width:360px;" data-sound='[["headphones","Headphones",""],["speaker","Speakers","",1]]'></div>
+  </div>
+</section>
+
+<!-- 3. Live status (Set action) -->
+<section class="slide" id="s3" style="flex-direction:column; align-items:center; justify-content:center;">
+  <span class="tag">Live status</span>
+  <h2 style="text-align:center;">Know what's active at a glance</h2>
+  <p class="lead" style="text-align:center; margin-top:14px;">Keys update the moment the device changes, even when you switch it in Windows.</p>
+  <div style="display:flex; gap:70px; margin-top:64px;">
+    <div><div class="deck" style="--cols:1; --k:190px;" data-keys='[["headphones"]]'></div><div class="cap">Active</div></div>
+    <div><div class="deck" style="--cols:1; --k:190px;" data-keys='[["speaker","#606060"]]'></div><div class="cap">Not active</div></div>
+    <div><div class="deck" style="--cols:1; --k:190px;" data-keys='[["mic"]]'></div><div class="cap">Microphones too</div></div>
+    <div><div class="deck" style="--cols:1; --k:190px;" data-keys='[["Earbuds","#606060","alert"]]'></div><div class="cap">Pressed while unplugged</div></div>
+  </div>
+</section>
+
+<!-- 4. Settings: Device and Behavior sections of the real property inspector -->
+<section class="slide" id="s4" style="align-items:center; gap:90px;">
+  <div class="pi" data-pi='{"action":"toggle","sections":[0,1],"settings":{"direction":"output","role":"all","matchStrategy":"Fuzzy","primary":"out-hp","secondary":"out-spk","hideUnavailable":true,"hideDeviceType":false}}'></div>
+  <div class="col">
+    <span class="tag">Settings</span>
+    <h2>Set it up in seconds</h2>
+    <div class="callouts" style="margin-top:44px;">
+      <div class="callout"><div class="n">1</div><div><h3>Pick your devices</h3><p>Choose from your connected devices. Unplugged and disabled ones can be hidden.</p></div></div>
+      <div class="callout"><div class="n">2</div><div><h3>Output or input</h3><p>Switch speakers and headphones, or microphones.</p></div></div>
+      <div class="callout"><div class="n">3</div><div><h3>Choose the role</h3><p>Default, Communications for calling apps, or All for both.</p></div></div>
+      <div class="callout"><div class="n">4</div><div><h3>Follows your devices</h3><p>Fuzzy matching finds a device again after Windows renumbers it.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Icons & colors: Icon appearance section of the real property inspector -->
+<section class="slide" id="s5" style="flex-direction:column; align-items:center; justify-content:center;">
+  <span class="tag">Icons &amp; colors</span>
+  <h2 style="text-align:center;">Make every key yours</h2>
+  <p class="lead" style="text-align:center; margin-top:14px;">Pick an icon for each device and color it. Set keys get their own On and Off colors.</p>
+  <div style="display:flex; gap:70px; align-items:center; margin-top:56px;">
+    <div class="pi" data-pi='{"action":"set","sections":[2],"settings":{"direction":"output","role":"all","matchStrategy":"Fuzzy","primary":"out-hp","icon":"headphones","iconBrightColor":"#4cc9f0","iconDarkColor":"#2a4752","hideUnavailable":true,"hideDeviceType":false}}'></div>
+    <div style="font-size:64px; color:var(--muted);">→</div>
+    <div class="deck" style="--cols:3; --k:140px;" data-keys='[["headphones","#4cc9f0"],["speaker","#ff9f43"],["Earbuds","#3ddc84"],["headphones","#2a4752"],["mic","#ff6b9a"],["mic","#b388ff"]]'></div>
+  </div>
+</section>
+
+<!-- App icon, rendered at 288x288 -->
+<section class="slide" id="sicon"><div data-appicon style="width:288px; height:288px;"></div></section>
+
+<script>
+  const ICONS = "../../shared/AudioDevicesIcons/";
+  const PI = "../../shared/propertyinspector/index.html";
+  const icon = (id) => `url(${ICONS}${id}.png)`;
+
+  document.querySelectorAll("[data-appicon]").forEach((el) => {
+    const tpl = document.getElementById("appicon").content.firstElementChild.cloneNode(true);
+    tpl.style.cssText = el.getAttribute("style");
+    el.replaceWith(tpl);
+  });
+
+  // [icon, color, flag]: an empty color keeps the icon's own white, as the plugin does; "hl" rings the key;
+  // "alert" shows the warning triangle in place of the image, as Stream Deck's showAlert() does.
+  document.querySelectorAll(".deck[data-keys]").forEach((deck) => {
+    for (const [id, color, flag] of JSON.parse(deck.dataset.keys)) {
+      const key = document.createElement("div");
+      key.className = "key" + (flag === "hl" ? " hl" : "");
+      key.innerHTML = flag === "alert"
+        ? `<svg class="alert"><use href="#alert"/></svg>`
+        : `<i style="--icon:${icon(id)}; ${color ? `background:${color}` : ""}"></i>`;
+      deck.appendChild(key);
+    }
+  });
+
+  // [icon, device name, interface name (optional), selected]; data-title overrides the "Sound output" heading.
+  document.querySelectorAll(".sound[data-sound]").forEach((card) => {
+    card.innerHTML = `<div class="sound-h">${card.dataset.title || "Sound output"}</div>` + JSON.parse(card.dataset.sound).map(([id, name, iface, on]) =>
+      `<div class="sound-r${on ? " on" : ""}"><div class="ic"><i class="glyph" style="--icon:${icon(id)}"></i></div>`
+      + `<div><b>${name}</b>${iface ? `<em>${iface}</em>` : ""}</div>${on ? `<span class="chk">✓</span>` : ""}</div>`).join("");
+  });
+
+  // ---- Property inspector: the real one, talking to a fake Stream Deck socket ----
+  const PI_WIDTH = 380, PI_ZOOM = 2.05;
+  const dev = (id, direction, endpointName, interfaceName, state = "connected") =>
+    [id, { id, direction, endpointName, interfaceName, displayName: `${endpointName} (${interfaceName})`, state }];
+  const OUTPUTS = Object.fromEntries([
+    dev("out-hp", "output", "Headphones", "Gaming Headset"),
+    dev("out-spk", "output", "Speakers", "High Definition Audio Device"),
+    dev("out-bt", "output", "Earbuds", "Bluetooth Audio"),
+    dev("out-tv", "output", "TV", "Display Audio", "device_present_no_connection"),
+  ]);
+  const INPUTS = Object.fromEntries([
+    dev("in-mic", "input", "Microphone", "USB Microphone"),
+    dev("in-hs", "input", "Headset Microphone", "USB Audio Device"),
+  ]);
+  const ICON_LIST = ["earbuds", "headphones", "mic", "speaker"].map((id) => ({ id, label: id[0].toUpperCase() + id.slice(1) }));
+
+  function fakeSocket(win) {
+    const sock = {
+      send(text) {
+        const msg = JSON.parse(text);
+        const reply = (event, payload) => setTimeout(() => sock.onmessage({ data: JSON.stringify({ event, payload }) }));
+        if (msg.event === "getGlobalSettings") reply("didReceiveGlobalSettings", { settings: {} });
+        if (msg.event !== "sendToPlugin") return;
+        if (msg.payload.event === "getIconList") reply("sendToPropertyInspector", { event: "getIconList", icons: ICON_LIST });
+        if (msg.payload.event === "getDeviceList") reply("sendToPropertyInspector", { event: "getDeviceList", inputDevices: INPUTS, outputDevices: OUTPUTS });
+      },
+    };
+    setTimeout(() => sock.onopen());
+    return sock;
+  }
+
+  document.querySelectorAll(".pi[data-pi]").forEach((box) => {
+    const cfg = JSON.parse(box.dataset.pi);
+    const devices = cfg.settings.direction === "input" ? INPUTS : OUTPUTS;
+    for (const k of ["primary", "secondary"]) if (cfg.settings[k]) cfg.settings[k] = devices[cfg.settings[k]];
+
+    const frame = document.createElement("iframe");
+    frame.src = PI;
+    frame.style.width = PI_WIDTH + "px";
+    frame.style.transform = `scale(${PI_ZOOM})`;
+    box.appendChild(frame);
+    frame.onload = () => {
+      const win = frame.contentWindow, doc = frame.contentDocument;
+      win.WebSocket = function () { return fakeSocket(win); };
+      win.connectElgatoStreamDeckSocket(0, "pi", "registerPropertyInspector",
+        JSON.stringify({ plugin: { uuid: "com.morgan-scruggs.audioswitcherplus-node", version: "" } }),
+        JSON.stringify({ action: `com.morgan-scruggs.audioswitcherplus-node.${cfg.action}`, payload: { settings: cfg.settings } }));
+      // Show only the sections this slide is about.
+      doc.querySelectorAll("#mainWrapper > details").forEach((d, i) => { if (!cfg.sections.includes(i)) d.style.display = "none"; });
+      doc.querySelector(".help-toggle").style.display = "none";
+      doc.querySelector("footer").style.display = "none";
+      setTimeout(() => {
+        const h = doc.getElementById("mainWrapper").getBoundingClientRect().bottom + 6;
+        frame.style.height = h + "px";
+        box.style.width = PI_WIDTH * PI_ZOOM + "px";
+        box.style.height = h * PI_ZOOM + "px";
+      }, 50);
+    };
+  });
+
+  const n = location.hash.slice(1) || "1";
+  document.getElementById("s" + n).classList.add("on");
+</script>
+</body>
+</html>

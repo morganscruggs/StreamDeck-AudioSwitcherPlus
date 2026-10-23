@@ -1,0 +1,23 @@
+Audio Switcher Plus changes your Windows audio device from a Stream Deck key. Flip between headphones and speakers with one press, or give each device its own key. Every key shows which device is active, so you always know where your sound is going. Works for microphones too.
+
+Features
+• Toggle Audio Device: one key flips between two devices
+• Set Audio Device: one key per device, lit while that device is active
+• Output or input: switch speakers and headphones, or microphones
+• Role: Default, Communications (calling apps), or All for both
+• Live status: keys update the moment the device changes, even when you switch it in Windows
+• Follows your devices: finds a device again after Windows renumbers it (e.g. "2- Headphones")
+• Clean device list: hide unplugged and disabled devices, and device-type names
+• Your icons and colors: headphones, speaker, earbuds or mic, in any color
+• Nothing extra to install: runs inside Stream Deck, so Windows Smart App Control has no program to block
+
+Setup
+1. Drag "Toggle Audio Device" or "Set Audio Device" onto a key.
+2. Pick your device (two for Toggle), then choose Output or Input and the role.
+3. Optionally pick an icon and colors.
+
+Tip: Set Audio Device works in Multi Actions, so one press can switch your output and your microphone together.
+
+Based on Fred Emmott's open-source Audio Switcher, with added features.
+
+Requirements: Windows 10 or later and Stream Deck 7.1 or later. Not available for macOS.

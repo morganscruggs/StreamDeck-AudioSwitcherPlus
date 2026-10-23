@@ -18,8 +18,9 @@ Decisions to make
 [x] README "Getting Help" section - rewritten: contact via GitHub issues, may be slow, mainly for
     personal use (no longer contradicts the issue templates).
 
-[x] Plugin category name - renamed to "Audio Switcher Plus" / "Audio Switcher Plus (Node)" to match
-    the plugin names, clearing Elgato's validator warning. (Needs a rebuild/redeploy to show up in
+[x] Plugin category name - renamed to match the plugin names, clearing Elgato's validator warning.
+    Now "Audio Switcher Plus" for the node build (the one published to the Marketplace) and
+    "Audio Switcher Plus (exe)" for the exe build. (Needs a rebuild/redeploy to show up in
     Stream Deck's action list.)
 
 
